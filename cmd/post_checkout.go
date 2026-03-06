@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -26,6 +27,9 @@ func postCheckoutCmd() *cobra.Command {
 			}
 
 			cfg, err := config.Load()
+			if errors.Is(err, os.ErrNotExist) {
+				return nil
+			}
 			if err != nil {
 				return err
 			}
