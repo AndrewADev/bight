@@ -65,10 +65,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
         run: |
-          gh release delete nightly --repo "$REPO" --yes 2>/dev/null || true
-          gh release create nightly dist/* \
+          gh release delete latest --repo "$REPO" --yes 2>/dev/null || true
+          gh release create latest dist/* \
             --repo "$REPO" \
             --title "${{ github.sha }}" \
-            --notes "Latest nightly build from \`main\`. Not for production use." \
+            --notes "Latest build from \`main\`. Not for production use." \
             --prerelease \
             --target "${{ github.sha }}"
