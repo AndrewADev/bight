@@ -28,7 +28,7 @@ env_files:
 	f.WriteString(yaml)
 	f.Close()
 
-	cfg, err := Load(f.Name())
+	cfg, err := load(f.Name())
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
@@ -58,7 +58,7 @@ env_files:
 }
 
 func TestLoadMissingFile(t *testing.T) {
-	_, err := Load("/nonexistent/.bight.yml")
+	_, err := load("/nonexistent/.bight.yml")
 	if err == nil {
 		t.Error("expected error for missing file")
 	}

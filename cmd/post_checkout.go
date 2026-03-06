@@ -25,7 +25,7 @@ func postCheckoutCmd() *cobra.Command {
 				return err
 			}
 
-			cfg, err := config.Load(".bight.yml")
+			cfg, err := config.Load()
 			if err != nil {
 				return err
 			}
