@@ -27,7 +27,20 @@ type Var struct {
 	On       string `yaml:"on"`
 }
 
-func Load(path string) (*Config, error) {
+func Load() (*Config, error) {
+	for _, name := range []string{".bight.yml", ".bight.yaml"} {
+		cfg, err := load(name)
+		if err == nil {
+			return cfg, nil
+		}
+		if !os.IsNotExist(err) {
+			return nil, err
+		}
+	}
+	return nil, os.ErrNotExist
+}
+
+func load(path string) (*Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
