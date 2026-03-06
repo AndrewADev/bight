@@ -9,7 +9,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ```bash
-go build ./...          # build
+go build .              # build binary
+go build ./...          # compile-check all packages (does not write binary)
 go test ./...           # run all tests
 go test ./... -run TestName  # run a single test
 go vet ./...            # lint
