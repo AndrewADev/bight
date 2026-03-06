@@ -33,3 +33,6 @@ bight
 # Editor/IDE
 # .idea/
 # .vscode/
+
+# Assistants
+.claude/*.local.json

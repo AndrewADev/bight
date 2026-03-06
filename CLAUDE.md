@@ -13,6 +13,8 @@ go build ./...          # build
 go test ./...           # run all tests
 go test ./... -run TestName  # run a single test
 go vet ./...            # lint
+prek install            # install pre-commit hooks (once, after cloning)
+conform enforce --commit-msg-file .git/COMMIT_EDITMSG  # lint commit message (angular conventions)
 ```
 
 ## Architecture

@@ -1,0 +1,19 @@
+policies:
+  - type: commit
+    spec:
+      conventional:
+        types:
+          - build
+          - chore
+          - ci
+          - docs
+          - feat
+          - fix
+          - perf
+          - refactor
+          - revert
+          - style
+          - test
+        scopes:
+          - ".*"
+        descriptionLength: 72
