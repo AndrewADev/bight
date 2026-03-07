@@ -59,6 +59,7 @@ git checkout -b feat-login
 |---|---|---|
 | `template` | Rendered from `{{.Project}}` / `{{.Branch}}` | `DB_NAME` |
 | `random` | Fresh 32-byte hex string | `JWT_SECRET`, tokens |
+| `deterministic` | Stable 64-char hex derived from project + branch | `DB_NAME` (same value across machines) |
 
 ### Triggers (`on`)
 
