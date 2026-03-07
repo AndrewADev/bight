@@ -7,6 +7,6 @@ func Root() *cobra.Command {
 		Use:   "bight",
 		Short: "Patch .env files on git branch checkout",
 	}
-	root.AddCommand(installCmd(), postCheckoutCmd(), runCmd())
+	root.AddCommand(installCmd(), uninstallCmd(), postCheckoutCmd(), runCmd())
 	return root
 }
