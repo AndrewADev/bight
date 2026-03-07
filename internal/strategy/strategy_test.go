@@ -61,6 +61,63 @@ func TestApplyRandom(t *testing.T) {
 	}
 }
 
+func TestApplyDeterministic_Stable(t *testing.T) {
+	ctx := Context{Branch: "feat-login", Project: "myapp"}
+	val1, err := Apply("deterministic", ctx, testCfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	val2, err := Apply("deterministic", ctx, testCfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if val1 != val2 {
+		t.Errorf("expected stable value, got %q and %q", val1, val2)
+	}
+}
+
+func TestApplyDeterministic_VariesByBranch(t *testing.T) {
+	val1, err := Apply("deterministic", Context{Branch: "feat-login", Project: "myapp"}, testCfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	val2, err := Apply("deterministic", Context{Branch: "main", Project: "myapp"}, testCfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if val1 == val2 {
+		t.Error("expected different values for different branches")
+	}
+}
+
+func TestApplyDeterministic_VariesByProject(t *testing.T) {
+	val1, err := Apply("deterministic", Context{Branch: "main", Project: "myapp"}, testCfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	val2, err := Apply("deterministic", Context{Branch: "main", Project: "otherapp"}, testCfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if val1 == val2 {
+		t.Error("expected different values for different projects")
+	}
+}
+
+func TestApplyDeterministic_Format(t *testing.T) {
+	ctx := Context{Branch: "main", Project: "myapp"}
+	val, err := Apply("deterministic", ctx, testCfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(val) != 64 {
+		t.Errorf("len = %d, want 64", len(val))
+	}
+	if _, err := hex.DecodeString(val); err != nil {
+		t.Errorf("not valid hex: %v", err)
+	}
+}
+
 func TestApplyUnknownStrategy(t *testing.T) {
 	ctx := Context{Branch: "main", Project: "myapp"}
 	_, err := Apply("nonexistent", ctx, testCfg)
