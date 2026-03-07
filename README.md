@@ -35,7 +35,15 @@ env_files:
         on: checkout
 ```
 
-### 3. Switch branches
+### 3. Verify your setup
+
+```sh
+bight doctor
+```
+
+Checks that the git hook is installed, `.bight.yml` (or `.bight.yaml`) is valid, env files exist, and all strategies and triggers are recognised. Run this after cloning or if something isn't patching as expected.
+
+### 4. Switch branches
 
 ```sh
 git checkout -b feat-login

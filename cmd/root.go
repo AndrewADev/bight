@@ -8,6 +8,6 @@ func Root() *cobra.Command {
 		Short:   "Patch .env files on git branch checkout",
 		Version: resolveVersion(),
 	}
-	root.AddCommand(installCmd(), uninstallCmd(), postCheckoutCmd(), runCmd())
+	root.AddCommand(installCmd(), uninstallCmd(), postCheckoutCmd(), runCmd(), doctorCmd())
 	return root
 }
