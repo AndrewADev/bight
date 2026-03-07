@@ -8,6 +8,34 @@ import (
 	"github.com/AndrewADev/bight/internal/strategy"
 )
 
+type dryRunResult struct {
+	path    string
+	varName string
+	value   string
+	err     error
+}
+
+func dryRunEnvFiles(cfg *config.Config, branch string) []dryRunResult {
+	ctx := strategy.Context{Branch: branch, Project: cfg.Project}
+	var results []dryRunResult
+
+	for _, ef := range cfg.EnvFiles {
+		for _, v := range ef.Vars {
+			if v.On != "checkout" {
+				continue
+			}
+			val, err := strategy.Apply(v.Strategy, ctx, cfg)
+			results = append(results, dryRunResult{
+				path:    ef.Path,
+				varName: v.Name,
+				value:   val,
+				err:     err,
+			})
+		}
+	}
+	return results
+}
+
 func patchEnvFiles(cfg *config.Config, branch string) error {
 	ctx := strategy.Context{
 		Branch:  branch,

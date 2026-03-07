@@ -10,7 +10,9 @@ import (
 )
 
 func runCmd() *cobra.Command {
-	return &cobra.Command{
+	var dryRun bool
+
+	cmd := &cobra.Command{
 		Use:   "run",
 		Short: "Manually apply env patching for the current branch",
 		Args:  cobra.NoArgs,
@@ -28,7 +30,27 @@ func runCmd() *cobra.Command {
 				return err
 			}
 
+			if dryRun {
+				results := dryRunEnvFiles(cfg, branch)
+				var hasErr bool
+				for _, r := range results {
+					if r.err != nil {
+						fmt.Fprintf(os.Stderr, "bight (dry-run): var %s: %v\n", r.varName, r.err)
+						hasErr = true
+						continue
+					}
+					fmt.Printf("bight (dry-run): %s → %s=%s\n", r.path, r.varName, r.value)
+				}
+				if hasErr {
+					return fmt.Errorf("dry-run completed with errors")
+				}
+				return nil
+			}
+
 			return patchEnvFiles(cfg, branch)
 		},
 	}
+
+	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Print what would be written without modifying any files")
+	return cmd
 }
