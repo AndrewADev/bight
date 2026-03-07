@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 const hookScript = "#!/bin/sh\n%s post-checkout \"$@\"\n"
@@ -25,5 +26,25 @@ func Install() error {
 		return fmt.Errorf("writing hook: %w", err)
 	}
 
+	return nil
+}
+
+// Check returns an error if the post-checkout hook is not installed or does
+// not reference the current binary path.
+func Check() error {
+	exe, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("resolving binary path: %w", err)
+	}
+
+	hookPath := filepath.Join(".git", "hooks", "post-checkout")
+	data, err := os.ReadFile(hookPath)
+	if err != nil {
+		return fmt.Errorf("hook not found")
+	}
+
+	if !strings.Contains(string(data), exe) {
+		return fmt.Errorf("hook exists but does not reference current binary")
+	}
 	return nil
 }
