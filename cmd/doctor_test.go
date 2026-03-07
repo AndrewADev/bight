@@ -131,7 +131,7 @@ func TestRunChecks_UnknownStrategy(t *testing.T) {
 		Project: "myapp",
 		EnvFiles: []config.EnvFile{
 			{Path: ".env", Vars: []config.Var{
-				{Name: "SECRET", Strategy: "deterministic", On: "checkout"},
+				{Name: "SECRET", Strategy: "nonexistent", On: "checkout"},
 			}},
 		},
 	}

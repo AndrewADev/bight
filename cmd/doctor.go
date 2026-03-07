@@ -79,7 +79,7 @@ func runChecks(cfg *config.Config, cfgErr error, deps checkDeps) []result {
 	}
 
 	// Check 6: strategies valid
-	validStrategies := map[string]bool{"template": true, "random": true}
+	validStrategies := map[string]bool{"template": true, "random": true, "deterministic": true}
 	var badStrategies []string
 	for _, ef := range cfg.EnvFiles {
 		for _, v := range ef.Vars {

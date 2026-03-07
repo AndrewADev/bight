@@ -17,6 +17,8 @@ func Apply(s string, ctx Context, cfg *config.Config) (string, error) {
 		return applyTemplate(ctx, cfg.Defaults.BranchTemplate)
 	case "random":
 		return applyRandom()
+	case "deterministic":
+		return applyDeterministic(ctx)
 	default:
 		return "", fmt.Errorf("unknown strategy: %s", s)
 	}
