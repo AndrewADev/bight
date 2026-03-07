@@ -41,7 +41,11 @@ jobs:
         run: |
           ext=""
           [ "$GOOS" = "windows" ] && ext=".exe"
-          go build -o "bight-${GOOS}-${GOARCH}${ext}" .
+          short_sha="${{ github.sha }}"
+          short_sha="${short_sha:0:7}"
+          go build \
+            -ldflags="-X 'github.com/AndrewADev/bight/cmd.ldVersion=${short_sha}'" \
+            -o "bight-${GOOS}-${GOARCH}${ext}" .
 
       - uses: actions/upload-artifact@v7
         with:
