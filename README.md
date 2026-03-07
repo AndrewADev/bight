@@ -53,6 +53,28 @@ git checkout -b feat-login
 
 `bight` patches only the listed vars — the rest of your `.env` is left untouched.
 
+### Manual patching and dry runs
+
+To apply env patching for the current branch without switching:
+
+```sh
+bight run
+```
+
+To preview what would be written without touching any files:
+
+```sh
+bight run --dry-run
+# bight (dry-run): .env → DB_NAME=myapp_feat-login
+```
+
+**Tip:** to test how another branch would be patched, suppress the hook when switching so `bight` doesn't fire automatically, then use `--dry-run`:
+
+```sh
+git -c core.hooksPath=/dev/null checkout other-branch
+bight run --dry-run
+```
+
 ### Strategies
 
 | Strategy | Output | Typical use |
