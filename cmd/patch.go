@@ -43,21 +43,29 @@ func patchEnvFiles(cfg *config.Config, branch string) error {
 	}
 
 	for _, ef := range cfg.EnvFiles {
+		patches := make(map[string]string)
 		for _, v := range ef.Vars {
 			if v.On != "checkout" {
 				continue
 			}
-
 			val, err := strategy.Apply(v.Strategy, ctx, cfg)
 			if err != nil {
 				return fmt.Errorf("var %s: %w", v.Name, err)
 			}
+			patches[v.Name] = val
+		}
 
-			if err := env.Patch(ef.Path, v.Name, val); err != nil {
-				return fmt.Errorf("patching %s: %w", ef.Path, err)
-			}
+		comments, err := env.ScanComments(ef.Path, cfg.Defaults.CollectComments)
+		if err != nil {
+			return fmt.Errorf("scanning %s: %w", ef.Path, err)
+		}
 
-			fmt.Printf("bight: %s → %s=%s\n", ef.Path, v.Name, val)
+		if err := env.PatchAll(ef.Path, patches, comments); err != nil {
+			return fmt.Errorf("patching %s: %w", ef.Path, err)
+		}
+
+		for name, val := range patches {
+			fmt.Printf("bight: %s → %s=%s\n", ef.Path, name, val)
 		}
 	}
 	return nil
