@@ -41,7 +41,7 @@ env_files:
 bight doctor
 ```
 
-Checks that the git hook is installed, `.bight.yml` (or `.bight.yaml`) is valid, env files exist, and all strategies and triggers are recognised. Run this after cloning or if something isn't patching as expected.
+Checks that the git hook is installed, `.bight.yml` (or `.bight.yaml`) is valid, env files exist, and all strategies and triggers are recognized. Run this after cloning or if something isn't patching as expected.
 
 ### 4. Switch branches
 
@@ -82,6 +82,25 @@ bight run --dry-run
 | `template` | Rendered from `{{.Project}}` / `{{.Branch}}` | `DB_NAME` |
 | `random` | Fresh 32-byte hex string | `JWT_SECRET`, tokens |
 | `deterministic` | Stable 64-char hex derived from project + branch | `DB_NAME` (same value across machines) |
+
+### Preserving comments (`collect-comments`)
+
+Full comment preservation is not supported, as the package we use, `godotenv`, strips comments on rewrite. As a partial workaround, `defaults.collect-comments` re-appends comments collected before the patch was applied:
+
+> **Note:** This is a best-effort feature. Comments are collected from the file before patching and re-appended at the end afterwards — their original positions are not restored, and inline comments (`KEY=val # note`) are lost entirely.
+
+| Value | Behavior |
+|---|---|
+| `all` | Re-appends every full-line comment |
+| `blocks-only` | Re-appends only contiguous comment blocks (≥ 2 lines) — skips isolated `# notes` |
+| unset / `none` | Comments are not preserved (default) |
+
+```yaml
+defaults:
+  collect-comments: blocks-only
+```
+
+Comments are always written after the key=value pairs.
 
 ### Triggers (`on`)
 

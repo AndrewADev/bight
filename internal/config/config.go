@@ -13,7 +13,8 @@ type Config struct {
 }
 
 type Defaults struct {
-	BranchTemplate string `yaml:"branch_template"`
+	BranchTemplate  string `yaml:"branch_template"`
+	CollectComments string `yaml:"collect-comments"`
 }
 
 type EnvFile struct {
