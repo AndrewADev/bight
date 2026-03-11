@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
   workflow_dispatch:
 
 permissions: read-all
@@ -41,10 +43,14 @@ jobs:
         run: |
           ext=""
           [ "$GOOS" = "windows" ] && ext=".exe"
-          short_sha="${{ github.sha }}"
-          short_sha="${short_sha:0:7}"
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            version="${{ github.ref_name }}"
+          else
+            short_sha="${{ github.sha }}"
+            version="${short_sha:0:7}"
+          fi
           go build \
-            -ldflags="-X 'github.com/AndrewADev/bight/cmd.ldVersion=${short_sha}'" \
+            -ldflags="-X 'github.com/AndrewADev/bight/cmd.ldVersion=${version}'" \
             -o "bight-${GOOS}-${GOARCH}${ext}" .
 
       - uses: actions/upload-artifact@v7
@@ -59,12 +65,45 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
       - uses: actions/download-artifact@v7
         with:
           path: dist
           merge-multiple: true
 
-      - name: Publish
+      - name: Generate checksums
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          cd dist
+          sha256sum * > checksums.txt
+
+      - uses: taiki-e/install-action@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          tool: git-cliff@2
+
+      - name: Generate release notes
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          git-cliff --tag "${{ github.ref_name }}" --latest --output release-notes.md
+
+      - name: Publish semver release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release create "$TAG" dist/* \
+            --repo "$REPO" \
+            --title "$TAG" \
+            --notes-file release-notes.md
+
+      - name: Publish rolling latest
+        if: github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
