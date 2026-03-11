@@ -28,3 +28,28 @@ Commit messages follow [Angular commit conventions](https://github.com/angular/a
 ```bash
 conform enforce --commit-msg-file .git/COMMIT_EDITMSG
 ```
+
+## Releasing
+
+Releases are triggered by pushing a semver tag. The CI workflow builds 5-platform binaries, generates a changelog via `git-cliff`, and publishes a GitHub release.
+
+Prerequisites: [`git-cliff`](https://git-cliff.org/docs/installation).
+
+```bash
+# 1. Update CHANGELOG.md and stage the release commit
+git-cliff --unreleased --tag v0.2.0 --prepend CHANGELOG.md
+git commit -am "chore: release v0.2.0"
+
+# 2. Tag and push
+git tag v0.2.0
+git push && git push --tags
+```
+
+CI will publish the release automatically once the tag is pushed.
+
+### Versioning
+
+Format: `v0.MINOR.PATCH` (major is pinned at `0` until the config schema and CLI are stable).
+
+- **Minor bump** (`v0.2.0 → v0.3.0`): may include breaking changes to `.bight.yml` or the CLI interface.
+- **Patch bump** (`v0.2.0 → v0.2.1`): bug fixes only, no breaking changes.
