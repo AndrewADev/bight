@@ -5,6 +5,7 @@ import (
 
 	"github.com/AndrewADev/bight/internal/config"
 	"github.com/AndrewADev/bight/internal/env"
+	"github.com/AndrewADev/bight/internal/output"
 	"github.com/AndrewADev/bight/internal/strategy"
 )
 
@@ -65,7 +66,7 @@ func patchEnvFiles(cfg *config.Config, branch string) error {
 		}
 
 		for name, val := range patches {
-			fmt.Printf("bight: %s → %s=%s\n", ef.Path, name, val)
+			fmt.Printf("bight: %s %s %s=%s\n", ef.Path, output.Dim("→"), output.Cyan(name), output.Bold(val))
 		}
 	}
 	return nil
