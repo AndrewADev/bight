@@ -28,15 +28,18 @@ The binary serves two roles: an **installer** (run by the user) and a **hook han
 
 **Core flow on checkout:**
 1. Load `.bight.yml` (repo-level), merging with `~/.bight.yml` (global defaults)
-2. Determine which vars to patch based on the `on` trigger (`checkout` vs `db_create`)
+2. Determine which vars to patch based on the `on` trigger (`checkout`)
 3. Apply strategy per var: `template` (branch/project interpolation), `random` (fresh value), `deterministic` (hashed/transformed from branch name — stable per branch)
-4. Optionally create a Postgres database if `database.auto_create: true` and the DB doesn't exist
-5. Patch target `.env` files in-place using `godotenv` (not full replacement)
+4. Patch target `.env` files in-place using `godotenv` (not full replacement)
 
 **Key dependencies:**
 - `godotenv` — reading and writing `.env` files
-- `pgx` or postgres driver — creating databases if configured
+
+## Code Style
+
+- Prefer idiomatic Go: avoid shadowing built-in identifiers (`error`, `len`, `close`, etc.), use explicit names over clever ones, and follow standard Go naming conventions.
+- Keep dependencies minimal — prefer zero-dependency solutions using the standard library where practical.
 
 ## Config
 
-Per-repo config lives in `.bight.yml`. Global defaults in `~/.bight.yml`. The `on` trigger field controls when a var is patched: `checkout` (every branch switch) or `db_create` (only when the DB is newly created). See ONE-PAGER.md for the full config schema.
+Per-repo config lives in `.bight.yml`. Global defaults in `~/.bight.yml`. The `on` trigger field controls when a var is patched: `checkout` (every branch switch).
