@@ -39,7 +39,11 @@ func runCmd() *cobra.Command {
 						hasErr = true
 						continue
 					}
-					fmt.Printf("bight %s: %s %s %s=%s\n", output.Dim("(dry-run)"), r.path, output.Dim("→"), output.Cyan(r.varName), output.Bold(r.value))
+					display := r.value
+					if r.sensitive {
+						display = "***"
+					}
+					fmt.Printf("bight %s: %s %s %s=%s\n", output.Dim("(dry-run)"), r.path, output.Dim("→"), output.Cyan(r.varName), output.Bold(display))
 				}
 				if hasErr {
 					return fmt.Errorf("dry-run completed with errors")

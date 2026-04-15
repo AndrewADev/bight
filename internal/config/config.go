@@ -28,9 +28,10 @@ type EnvFile struct {
 }
 
 type Var struct {
-	Name     string `yaml:"name"`
-	Strategy string `yaml:"strategy"`
-	On       string `yaml:"on"`
+	Name      string `yaml:"name"`
+	Strategy  string `yaml:"strategy"`
+	On        string `yaml:"on"`
+	Sensitive bool   `yaml:"sensitive"`
 }
 
 func globalConfigPath() (string, bool) {

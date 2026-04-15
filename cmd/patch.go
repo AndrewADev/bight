@@ -10,10 +10,11 @@ import (
 )
 
 type dryRunResult struct {
-	path    string
-	varName string
-	value   string
-	err     error
+	path      string
+	varName   string
+	value     string
+	sensitive bool
+	err       error
 }
 
 func dryRunEnvFiles(cfg *config.Config, branch string) []dryRunResult {
@@ -27,10 +28,11 @@ func dryRunEnvFiles(cfg *config.Config, branch string) []dryRunResult {
 			}
 			val, err := strategy.Apply(v.Strategy, ctx, cfg)
 			results = append(results, dryRunResult{
-				path:    ef.Path,
-				varName: v.Name,
-				value:   val,
-				err:     err,
+				path:      ef.Path,
+				varName:   v.Name,
+				value:     val,
+				sensitive: v.Sensitive,
+				err:       err,
 			})
 		}
 	}
@@ -45,6 +47,7 @@ func patchEnvFiles(cfg *config.Config, branch string) error {
 
 	for _, ef := range cfg.EnvFiles {
 		patches := make(map[string]string)
+		sensitiveVars := make(map[string]bool)
 		for _, v := range ef.Vars {
 			if v.On != "checkout" {
 				continue
@@ -54,6 +57,7 @@ func patchEnvFiles(cfg *config.Config, branch string) error {
 				return fmt.Errorf("var %s: %w", v.Name, err)
 			}
 			patches[v.Name] = val
+			sensitiveVars[v.Name] = v.Sensitive
 		}
 
 		comments, err := env.ScanComments(ef.Path, cfg.Defaults.CollectComments)
@@ -66,7 +70,11 @@ func patchEnvFiles(cfg *config.Config, branch string) error {
 		}
 
 		for name, val := range patches {
-			fmt.Printf("bight: %s %s %s=%s\n", ef.Path, output.Dim("→"), output.Cyan(name), output.Bold(val))
+			display := val
+			if sensitiveVars[name] {
+				display = "***"
+			}
+			fmt.Printf("bight: %s %s %s=%s\n", ef.Path, output.Dim("→"), output.Cyan(name), output.Bold(display))
 		}
 	}
 	return nil
