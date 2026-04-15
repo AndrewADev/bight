@@ -1,10 +1,51 @@
 # bight
 
-A utility to help manage updating .env files when switching branches.
+Patches `.env` files automatically on `git checkout` — keeping local environments in sync with the current branch.
 
-## Usage
+```sh
+git checkout feat-login
+# bight: .env → DB_NAME=myapp_feat-login
+# bight: .env → JWT_SECRET=***
+```
 
-### 1. Install the git hook
+Only the listed vars are touched. The rest of your `.env` is left untouched.
+
+## Installation
+
+**With Go:**
+
+```sh
+go install github.com/AndrewADev/bight@latest
+```
+
+**From a release binary:**
+
+Download the binary for your platform from the [releases page](https://github.com/AndrewADev/bight/releases/latest):
+
+| Platform | File |
+|---|---|
+| macOS (Apple Silicon) | `bight-darwin-arm64` |
+| macOS (Intel) | `bight-darwin-amd64` |
+| Linux (x86-64) | `bight-linux-amd64` |
+| Linux (ARM64) | `bight-linux-arm64` |
+| Windows | `bight-windows-amd64.exe` |
+
+Then make it executable and put it on your `PATH`:
+
+```sh
+chmod +x bight-darwin-arm64
+mv bight-darwin-arm64 /usr/local/bin/bight
+```
+
+Each release includes a `checksums.txt` for verification:
+
+```sh
+sha256sum -c checksums.txt --ignore-missing
+```
+
+## Getting started
+
+### 1. Install
 
 Run once per repo, after cloning:
 
@@ -12,18 +53,62 @@ Run once per repo, after cloning:
 bight install
 ```
 
-This writes `.git/hooks/post-checkout` pointing at the current `bight` binary.
+This writes the git hook *and* walks you through creating a `.bight.yml` config:
 
-### 2. Add a config file
-
-Optionally create a global config at `~/.bight.yml` with defaults that apply across all repos:
-
-```yaml
-defaults:
-  branch_template: "{{.Project}}_{{.Branch}}"
+```
+bight: hook installed
+bight: no config file found. Create .bight.yml? [Y/n]
+  Project name [myapp]:
+  Env file path [.env]:
+  Add env vars to track? [Y/n]
+  (blank name to finish)
+    Var name: DB_NAME
+    Strategy:
+      1) template  - interpolate branch/project name (default)
+      2) random    - fresh random value on each checkout
+    Choice [1]: 1
+    Var name:
+bight: created .bight.yml
 ```
 
-Create `.bight.yml` in the repo root:
+### 2. Confirm everything is wired up
+
+```sh
+bight doctor
+```
+
+```
+bight doctor:
+  [ok]   git repo detected
+  [ok]   config: .bight.yml loaded
+  [ok]   config: project = "myapp", 1 env file(s)
+  [ok]   hook: installed
+  [ok]   env file: .env
+  [ok]   vars: all strategies valid
+  [ok]   vars: all triggers valid
+```
+
+### 3. Preview before it fires automatically
+
+```sh
+bight run --dry-run
+# bight (dry-run): .env → DB_NAME=myapp_main
+```
+
+No files are touched. When you're happy with what you see, you're done — the hook fires on every checkout from here on.
+
+### 4. Switch branches
+
+```sh
+git checkout -b feat-login
+# bight: .env → DB_NAME=myapp_feat-login
+```
+
+## Reference
+
+### Config file
+
+`bight install` generates a starter config, but you can hand-edit `.bight.yml` at any time:
 
 ```yaml
 project: myapp
@@ -43,24 +128,6 @@ env_files:
         sensitive: true      # mask value in console output
 ```
 
-### 3. Verify your setup
-
-```sh
-bight doctor
-```
-
-Checks that the git hook is installed, `.bight.yml` (or `.bight.yaml`) is valid, env files exist, and all strategies and triggers are recognized. Run this after cloning or if something isn't patching as expected.
-
-### 4. Switch branches
-
-```sh
-git checkout -b feat-login
-# bight: .env → DB_NAME=myapp_feat-login
-# bight: .env → JWT_SECRET=***
-```
-
-`bight` patches only the listed vars — the rest of your `.env` is left untouched.
-
 ### Using a non-default config file
 
 If your config isn't named `.bight.yml` or lives at a non-standard path, use `--config`:
@@ -72,20 +139,12 @@ bight doctor --config path/to/custom.bight.yml
 
 `--config` is a global flag — it works with any subcommand that reads config.
 
-### Manual patching and dry runs
+### Manual patching
 
 To apply env patching for the current branch without switching:
 
 ```sh
 bight run
-```
-
-To preview what would be written without touching any files:
-
-```sh
-bight run --dry-run
-# bight (dry-run): .env → DB_NAME=myapp_feat-login
-# bight (dry-run): .env → JWT_SECRET=***
 ```
 
 **Tip:** to test how another branch would be patched, suppress the hook when switching so `bight` doesn't fire automatically, then use `--dry-run`:
