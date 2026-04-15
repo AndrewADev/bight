@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/AndrewADev/bight/internal/output"
 	"github.com/spf13/cobra"
 )
 
@@ -34,11 +35,11 @@ func runCmd() *cobra.Command {
 				var hasErr bool
 				for _, r := range results {
 					if r.err != nil {
-						fmt.Fprintf(os.Stderr, "bight (dry-run): var %s: %v\n", r.varName, r.err)
+						fmt.Fprintln(os.Stderr, output.ErrorStderr(fmt.Sprintf("bight (dry-run): var %s: %v", r.varName, r.err)))
 						hasErr = true
 						continue
 					}
-					fmt.Printf("bight (dry-run): %s → %s=%s\n", r.path, r.varName, r.value)
+					fmt.Printf("bight %s: %s %s %s=%s\n", output.Dim("(dry-run)"), r.path, output.Dim("→"), output.Cyan(r.varName), output.Bold(r.value))
 				}
 				if hasErr {
 					return fmt.Errorf("dry-run completed with errors")

@@ -7,6 +7,7 @@ import (
 
 	"github.com/AndrewADev/bight/internal/config"
 	"github.com/AndrewADev/bight/internal/hook"
+	"github.com/AndrewADev/bight/internal/output"
 	"github.com/spf13/cobra"
 )
 
@@ -113,6 +114,22 @@ func runChecks(cfg *config.Config, cfgErr error, deps checkDeps) []result {
 	return results
 }
 
+func coloredStatus(r result) string {
+	tag := fmt.Sprintf("%-6s", "["+r.status+"]")
+	switch r.status {
+	case "ok":
+		return output.Green(tag)
+	case "info":
+		return output.Cyan(tag)
+	case "warn":
+		return output.Yellow(tag)
+	case "fail":
+		return output.Red(tag)
+	default:
+		return tag
+	}
+}
+
 func doctorCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:          "doctor",
@@ -138,7 +155,7 @@ func doctorCmd() *cobra.Command {
 			fmt.Println("bight doctor:")
 			anyFailed := false
 			for _, r := range results {
-				fmt.Printf("  %-6s %s\n", "["+r.status+"]", r.msg)
+				fmt.Printf("  %s %s\n", coloredStatus(r), r.msg)
 				if r.status == "fail" {
 					anyFailed = true
 				}

@@ -10,6 +10,7 @@ import (
 
 	"github.com/AndrewADev/bight/internal/config"
 	"github.com/AndrewADev/bight/internal/hook"
+	"github.com/AndrewADev/bight/internal/output"
 	"github.com/spf13/cobra"
 )
 
@@ -21,7 +22,7 @@ func installCmd() *cobra.Command {
 			if err := hook.Install(); err != nil {
 				return err
 			}
-			fmt.Println("bight: hook installed")
+			fmt.Println(output.Green("bight: hook installed"))
 			return promptInitConfig()
 		},
 	}
@@ -91,6 +92,6 @@ func promptInitConfig() error {
 	if err := os.WriteFile(".bight.yml", []byte(config.Generate(project, envFile, vars)), 0o644); err != nil {
 		return err
 	}
-	fmt.Println("bight: created .bight.yml")
+	fmt.Println(output.Green("bight: created .bight.yml"))
 	return nil
 }

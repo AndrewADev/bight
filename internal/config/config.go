@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/AndrewADev/bight/internal/output"
 	"gopkg.in/yaml.v3"
 )
 
@@ -65,7 +66,7 @@ func LoadFrom(repoConfigPath string) (*Config, error) {
 	if path, ok := globalConfigPath(); ok {
 		if g, err := load(path); err == nil {
 			if len(g.EnvFiles) > 0 {
-				fmt.Fprintln(os.Stderr, "bight: warning: env_files in ~/.bight.yml is not supported and will be ignored; define env_files in the repo's .bight.yml instead")
+				fmt.Fprintln(os.Stderr, output.WarnStderr("bight: warning: env_files in ~/.bight.yml is not supported and will be ignored; define env_files in the repo's .bight.yml instead"))
 				g.EnvFiles = nil
 			}
 			global = g
@@ -88,7 +89,7 @@ func Load() (*Config, error) {
 	if path, ok := globalConfigPath(); ok {
 		if g, err := load(path); err == nil {
 			if len(g.EnvFiles) > 0 {
-				fmt.Fprintln(os.Stderr, "bight: warning: env_files in ~/.bight.yml is not supported and will be ignored; define env_files in the repo's .bight.yml instead")
+				fmt.Fprintln(os.Stderr, output.WarnStderr("bight: warning: env_files in ~/.bight.yml is not supported and will be ignored; define env_files in the repo's .bight.yml instead"))
 				g.EnvFiles = nil
 			}
 			global = g
