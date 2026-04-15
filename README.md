@@ -40,6 +40,7 @@ env_files:
       - name: JWT_SECRET
         strategy: random     # fresh 64-char hex string on every branch switch
         on: checkout
+        sensitive: true      # mask value in console output
 ```
 
 ### 3. Verify your setup
@@ -55,7 +56,7 @@ Checks that the git hook is installed, `.bight.yml` (or `.bight.yaml`) is valid,
 ```sh
 git checkout -b feat-login
 # bight: .env → DB_NAME=myapp_feat-login
-# bight: .env → JWT_SECRET=3f9a...
+# bight: .env → JWT_SECRET=***
 ```
 
 `bight` patches only the listed vars — the rest of your `.env` is left untouched.
@@ -84,6 +85,7 @@ To preview what would be written without touching any files:
 ```sh
 bight run --dry-run
 # bight (dry-run): .env → DB_NAME=myapp_feat-login
+# bight (dry-run): .env → JWT_SECRET=***
 ```
 
 **Tip:** to test how another branch would be patched, suppress the hook when switching so `bight` doesn't fire automatically, then use `--dry-run`:
@@ -100,6 +102,22 @@ bight run --dry-run
 | `template` | Rendered from `{{.Project}}` / `{{.Branch}}` | `DB_NAME` |
 | `random` | Fresh 32-byte hex string | `JWT_SECRET`, tokens |
 | `deterministic` | Stable 64-char hex derived from project + branch | `DB_NAME` (same value across machines) |
+
+### Sensitive vars (`sensitive`)
+
+Mark a var `sensitive: true` to prevent its value from appearing in console output. The value is still written to the `.env` file normally — only the terminal display is affected.
+
+```yaml
+- name: JWT_SECRET
+  strategy: random
+  on: checkout
+  sensitive: true
+```
+
+Output with `sensitive: true`:
+```
+bight: .env → JWT_SECRET=***
+```
 
 ### Preserving comments (`collect-comments`)
 

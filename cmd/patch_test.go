@@ -83,6 +83,36 @@ func TestDryRunEnvFiles_PropagatesStrategyError(t *testing.T) {
 	}
 }
 
+func TestDryRunEnvFiles_SensitiveFlagThreaded(t *testing.T) {
+	cfg := &config.Config{
+		Project: "myapp",
+		EnvFiles: []config.EnvFile{
+			{
+				Path: ".env",
+				Vars: []config.Var{
+					{Name: "JWT_SECRET", Strategy: "random", On: "checkout", Sensitive: true},
+					{Name: "DB_NAME", Strategy: "deterministic", On: "checkout"},
+				},
+			},
+		},
+	}
+
+	results := dryRunEnvFiles(cfg, "main")
+
+	if len(results) != 2 {
+		t.Fatalf("expected 2 results, got %d", len(results))
+	}
+	if !results[0].sensitive {
+		t.Errorf("results[0] (JWT_SECRET) sensitive = false, want true")
+	}
+	if results[0].value == "" {
+		t.Error("results[0] value should be non-empty even when sensitive")
+	}
+	if results[1].sensitive {
+		t.Errorf("results[1] (DB_NAME) sensitive = true, want false")
+	}
+}
+
 func TestDryRunEnvFiles_MultipleFilesAndVars(t *testing.T) {
 	cfg := &config.Config{
 		Project: "proj",

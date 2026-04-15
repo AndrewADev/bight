@@ -312,3 +312,39 @@ env_files:
 		t.Errorf("expected warning about env_files, got: %q", stderr)
 	}
 }
+
+func TestLoad_SensitiveField(t *testing.T) {
+	yaml := `
+project: myapp
+env_files:
+  - path: .env
+    vars:
+      - name: JWT_SECRET
+        strategy: random
+        on: checkout
+        sensitive: true
+      - name: DB_NAME
+        strategy: template
+        on: checkout
+`
+	f, err := os.CreateTemp("", "bight-*.yml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(f.Name())
+	f.WriteString(yaml)
+	f.Close()
+
+	cfg, err := load(f.Name())
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+
+	vars := cfg.EnvFiles[0].Vars
+	if !vars[0].Sensitive {
+		t.Errorf("Vars[0] (JWT_SECRET) Sensitive = false, want true")
+	}
+	if vars[1].Sensitive {
+		t.Errorf("Vars[1] (DB_NAME) Sensitive = true, want false")
+	}
+}

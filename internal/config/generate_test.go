@@ -17,6 +17,7 @@ func TestGenerate(t *testing.T) {
 		"name: DB_NAME",
 		"strategy: template",
 		"on: checkout",
+		"# sensitive: true",
 	}
 	for _, want := range checks {
 		if !strings.Contains(out, want) {
