@@ -60,6 +60,17 @@ git checkout -b feat-login
 
 `bight` patches only the listed vars — the rest of your `.env` is left untouched.
 
+### Using a non-default config file
+
+If your config isn't named `.bight.yml` or lives at a non-standard path, use `--config`:
+
+```sh
+bight run --config path/to/custom.bight.yml
+bight doctor --config path/to/custom.bight.yml
+```
+
+`--config` is a global flag — it works with any subcommand that reads config.
+
 ### Manual patching and dry runs
 
 To apply env patching for the current branch without switching:
