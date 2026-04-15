@@ -57,6 +57,32 @@ func merge(global, repo *Config) *Config {
 	return &out
 }
 
+// LoadFrom loads config from a specific repo config file path, merging with
+// the global config (~/.bight.yml) as usual. Unlike Load, it does not search
+// for .bight.yml or .bight.yaml in the current directory.
+func LoadFrom(repoConfigPath string) (*Config, error) {
+	var global *Config
+	if path, ok := globalConfigPath(); ok {
+		if g, err := load(path); err == nil {
+			if len(g.EnvFiles) > 0 {
+				fmt.Fprintln(os.Stderr, "bight: warning: env_files in ~/.bight.yml is not supported and will be ignored; define env_files in the repo's .bight.yml instead")
+				g.EnvFiles = nil
+			}
+			global = g
+		}
+	}
+
+	repo, err := load(repoConfigPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if global != nil {
+		return merge(global, repo), nil
+	}
+	return repo, nil
+}
+
 func Load() (*Config, error) {
 	var global *Config
 	if path, ok := globalConfigPath(); ok {

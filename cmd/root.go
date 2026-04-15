@@ -8,6 +8,7 @@ func Root() *cobra.Command {
 		Short:   "Patch .env files on git branch checkout",
 		Version: resolveVersion(),
 	}
+	root.PersistentFlags().StringVar(&configPath, "config", "", "Path to config file (default: .bight.yml)")
 	root.AddCommand(installCmd(), uninstallCmd(), postCheckoutCmd(), runCmd(), doctorCmd())
 	return root
 }

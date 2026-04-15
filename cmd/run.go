@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/AndrewADev/bight/internal/config"
 	"github.com/spf13/cobra"
 )
 
@@ -22,7 +21,7 @@ func runCmd() *cobra.Command {
 				return err
 			}
 
-			cfg, err := config.Load()
+			cfg, err := loadConfig()
 			if errors.Is(err, os.ErrNotExist) {
 				return fmt.Errorf("no .bight.yml or .bight.yaml found in current directory")
 			}

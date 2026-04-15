@@ -211,6 +211,63 @@ defaults:
 	}
 }
 
+func TestLoadFrom(t *testing.T) {
+	home := t.TempDir()
+	repo := t.TempDir()
+	custom := writeYAML(t, repo, "custom.bight.yml", `
+project: customapp
+defaults:
+  branch_template: "custom_{{.Branch}}"
+env_files:
+  - path: .env
+    vars:
+      - name: DB_NAME
+        strategy: template
+        on: checkout
+`)
+	withHome(t, home, repo)
+
+	cfg, err := LoadFrom(custom)
+	if err != nil {
+		t.Fatalf("LoadFrom: %v", err)
+	}
+	if cfg.Project != "customapp" {
+		t.Errorf("Project = %q, want customapp", cfg.Project)
+	}
+	if cfg.Defaults.BranchTemplate != "custom_{{.Branch}}" {
+		t.Errorf("BranchTemplate = %q", cfg.Defaults.BranchTemplate)
+	}
+}
+
+func TestLoadFromMissingFile(t *testing.T) {
+	_, err := LoadFrom("/nonexistent/custom.bight.yml")
+	if err == nil {
+		t.Error("expected error for missing file")
+	}
+}
+
+func TestLoadFromMergesGlobal(t *testing.T) {
+	home := t.TempDir()
+	repo := t.TempDir()
+	writeYAML(t, home, ".bight.yml", `
+defaults:
+  branch_template: "global_{{.Branch}}"
+`)
+	custom := writeYAML(t, repo, "custom.bight.yml", `project: myapp`)
+	withHome(t, home, repo)
+
+	cfg, err := LoadFrom(custom)
+	if err != nil {
+		t.Fatalf("LoadFrom: %v", err)
+	}
+	if cfg.Project != "myapp" {
+		t.Errorf("Project = %q, want myapp", cfg.Project)
+	}
+	if cfg.Defaults.BranchTemplate != "global_{{.Branch}}" {
+		t.Errorf("BranchTemplate = %q, want global_{{.Branch}}", cfg.Defaults.BranchTemplate)
+	}
+}
+
 func TestLoadGlobalEnvFilesWarning(t *testing.T) {
 	home := t.TempDir()
 	repo := t.TempDir()

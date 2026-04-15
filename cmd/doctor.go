@@ -120,7 +120,7 @@ func doctorCmd() *cobra.Command {
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			_, gitErr := os.Stat(".git/hooks")
-			cfg, cfgErr := config.Load()
+			cfg, cfgErr := loadConfig()
 
 			existing := map[string]bool{}
 			if cfg != nil {
