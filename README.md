@@ -16,6 +16,13 @@ This writes `.git/hooks/post-checkout` pointing at the current `bight` binary.
 
 ### 2. Add a config file
 
+Optionally create a global config at `~/.bight.yml` with defaults that apply across all repos:
+
+```yaml
+defaults:
+  branch_template: "{{.Project}}_{{.Branch}}"
+```
+
 Create `.bight.yml` in the repo root:
 
 ```yaml
@@ -107,6 +114,16 @@ Comments are always written after the key=value pairs.
 | Value | When |
 |---|---|
 | `checkout` | Every branch switch |
+
+### Global config (`~/.bight.yml`)
+
+Settings in `~/.bight.yml` apply across all repos and are overridden field-by-field by the repo's `.bight.yml`. Only `defaults` fields are supported globally — `env_files` and `vars` must be defined in the repo config. If a repo has no `.bight.yml`, `bight` does nothing — the global config alone is not enough to trigger patching.
+
+```yaml
+defaults:
+  branch_template: "{{.Project}}_{{.Branch}}"
+  collect-comments: blocks-only
+```
 
 ## Developing
 

@@ -1,10 +1,14 @@
 package config
 
 import (
+	"fmt"
 	"os"
+	"path/filepath"
 
 	"gopkg.in/yaml.v3"
 )
+
+var userHomeDir = os.UserHomeDir
 
 type Config struct {
 	Project  string    `yaml:"project"`
@@ -28,17 +32,66 @@ type Var struct {
 	On       string `yaml:"on"`
 }
 
+func globalConfigPath() (string, bool) {
+	home, err := userHomeDir()
+	if err != nil {
+		return "", false
+	}
+	return filepath.Join(home, ".bight.yml"), true
+}
+
+func merge(global, repo *Config) *Config {
+	out := *global
+	if repo.Project != "" {
+		out.Project = repo.Project
+	}
+	if repo.Defaults.BranchTemplate != "" {
+		out.Defaults.BranchTemplate = repo.Defaults.BranchTemplate
+	}
+	if repo.Defaults.CollectComments != "" {
+		out.Defaults.CollectComments = repo.Defaults.CollectComments
+	}
+	if len(repo.EnvFiles) > 0 {
+		out.EnvFiles = repo.EnvFiles
+	}
+	return &out
+}
+
 func Load() (*Config, error) {
+	var global *Config
+	if path, ok := globalConfigPath(); ok {
+		if g, err := load(path); err == nil {
+			if len(g.EnvFiles) > 0 {
+				fmt.Fprintln(os.Stderr, "bight: warning: env_files in ~/.bight.yml is not supported and will be ignored; define env_files in the repo's .bight.yml instead")
+				g.EnvFiles = nil
+			}
+			global = g
+		}
+		// silently ignore missing or unreadable global config
+	}
+
+	var repo *Config
 	for _, name := range []string{".bight.yml", ".bight.yaml"} {
-		cfg, err := load(name)
+		r, err := load(name)
 		if err == nil {
-			return cfg, nil
+			repo = r
+			break
 		}
 		if !os.IsNotExist(err) {
 			return nil, err
 		}
 	}
-	return nil, os.ErrNotExist
+
+	switch {
+	case repo != nil && global != nil:
+		return merge(global, repo), nil
+	case repo != nil:
+		return repo, nil
+	case global != nil:
+		return global, nil
+	default:
+		return nil, os.ErrNotExist
+	}
 }
 
 func load(path string) (*Config, error) {
