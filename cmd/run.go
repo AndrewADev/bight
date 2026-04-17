@@ -17,7 +17,7 @@ func runCmd() *cobra.Command {
 		Short: "Manually apply env patching for the current branch",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			branch, err := resolveBranch()
+			branch, err := resolveBranch(".")
 			if err != nil {
 				return err
 			}
