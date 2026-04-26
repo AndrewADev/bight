@@ -2,6 +2,7 @@ package env
 
 import (
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -207,5 +208,77 @@ func TestPatchAll_NonExistentFile(t *testing.T) {
 	}
 	if env["SECRET"] != "abc123" {
 		t.Errorf("SECRET = %q, want %q", env["SECRET"], "abc123")
+	}
+}
+
+func TestPatchAll_PermissionsPreserved(t *testing.T) {
+	path := writeTempEnv(t, "KEY=old\n")
+	if err := os.Chmod(path, 0640); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := PatchAll(path, map[string]string{"KEY": "new"}, nil); err != nil {
+		t.Fatalf("PatchAll: %v", err)
+	}
+
+	fi, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if fi.Mode().Perm() != 0640 {
+		t.Errorf("mode = %04o, want 0640", fi.Mode().Perm())
+	}
+}
+
+func TestPatchAll_DefaultPermissionsForNewFile(t *testing.T) {
+	path := filepath.Join(t.TempDir(), ".env.new")
+
+	if err := PatchAll(path, map[string]string{"X": "1"}, nil); err != nil {
+		t.Fatalf("PatchAll: %v", err)
+	}
+
+	fi, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if fi.Mode().Perm() != 0600 {
+		t.Errorf("mode = %04o, want 0600", fi.Mode().Perm())
+	}
+}
+
+func TestPatchAll_TempFileRemovedOnError(t *testing.T) {
+	dir := t.TempDir()
+	// Point at a non-existent subdirectory so CreateTemp fails.
+	path := filepath.Join(dir, "nonexistent-subdir", ".env")
+
+	err := PatchAll(path, map[string]string{"KEY": "val"}, nil)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+
+	entries, _ := os.ReadDir(dir)
+	for _, e := range entries {
+		if strings.HasSuffix(e.Name(), ".tmp") {
+			t.Errorf("stale temp file found: %s", e.Name())
+		}
+	}
+}
+
+func TestPatch_IsTransactional(t *testing.T) {
+	path := writeTempEnv(t, "A=1\nB=2\n")
+
+	if err := Patch(path, "A", "updated"); err != nil {
+		t.Fatalf("Patch: %v", err)
+	}
+
+	env, err := godotenv.Read(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if env["A"] != "updated" {
+		t.Errorf("A = %q, want %q", env["A"], "updated")
+	}
+	if env["B"] != "2" {
+		t.Errorf("B = %q, want %q", env["B"], "2")
 	}
 }
