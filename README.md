@@ -12,6 +12,12 @@ Only the listed vars are touched. The rest of your `.env` is left untouched.
 
 ## Installation
 
+**With Homebrew:**
+
+```sh
+brew install andrewadev/tap/bight
+```
+
 **With Go:**
 
 ```sh
