@@ -115,3 +115,13 @@ jobs:
             --notes "Latest build from \`main\`. Not for production use." \
             --prerelease \
             --target "${{ github.sha }}"
+
+  update-tap:
+    name: Update Homebrew tap
+    needs: release
+    if: startsWith(github.ref, 'refs/tags/')
+    uses: AndrewADev/homebrew-tap/.github/workflows/update-formula.yml@main
+    with:
+      version: ${{ github.ref_name }}
+    secrets:
+      tap_token: ${{ secrets.TAP_GITHUB_TOKEN }}
