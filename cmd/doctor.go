@@ -136,7 +136,7 @@ func doctorCmd() *cobra.Command {
 		Short:        "Validate bight setup and config",
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			_, gitErr := os.Stat(".git/hooks")
+			_, gitErr := hook.HooksDir()
 			cfg, cfgErr := loadConfig()
 
 			existing := map[string]bool{}
