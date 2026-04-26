@@ -36,3 +36,5 @@ bight
 
 # Assistants
 .claude/*.local.json
+.claude/worktrees
+CLAUDE.local.md
