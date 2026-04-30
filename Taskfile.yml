@@ -1,0 +1,43 @@
+version: '3'
+
+tasks:
+  next-version:
+    desc: Print the next version based on unreleased commits
+    cmds:
+      - git-cliff --bumped-version
+
+  changelog:
+    desc: "Update CHANGELOG.md for a release (usage: task changelog -- v0.2.0)"
+    requires:
+      vars: [CLI_ARGS]
+    vars:
+      TAG: '{{.CLI_ARGS}}'
+    cmds:
+      - "git-cliff --unreleased --tag {{.TAG}} --prepend CHANGELOG.md"
+
+  release-commit:
+    desc: "Commit staged release changes (usage: task release-commit -- v0.2.0)"
+    requires:
+      vars: [CLI_ARGS]
+    vars:
+      TAG: '{{.CLI_ARGS}}'
+    cmds:
+      - "git commit -am 'chore: release {{.TAG}}'"
+
+  tag:
+    desc: "Tag and push a release (usage: task tag -- v0.2.0)"
+    requires:
+      vars: [CLI_ARGS]
+    vars:
+      TAG: '{{.CLI_ARGS}}'
+    cmds:
+      - "git tag {{.TAG}}"
+      - git push
+      - git push --tags
+  
+  # Help and info
+  default:
+    desc: Show available tasks
+    cmds:
+      - task --list
+    silent: true
