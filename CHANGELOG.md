@@ -1,4 +1,23 @@
 # Changelog
+## v0.1.0 - 2026-04-30
+
+### Bug Fixes
+
+- Grant needed permissions
+
+### Documentation
+
+- Add homebrew formula
+
+### Features
+
+- Support enabling backup files
+
+### Miscellaneous
+
+- Ignore local claude files
+- Add Taskfile
+
 ## v0.0.2 - 2026-04-26
 
 ### Bug Fixes
