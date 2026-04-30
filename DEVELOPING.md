@@ -4,6 +4,7 @@
 
 - Go (see `go.mod` for minimum version)
 - [prek](https://github.com/j178/prek) — a faster drop-in for `pre-commit` (`pre-commit` also works if preferred)
+- [task](https://taskfile.dev/installation/) — task runner used for release workflows
 
 ## Setup
 
