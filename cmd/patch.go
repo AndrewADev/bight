@@ -60,6 +60,12 @@ func patchEnvFiles(cfg *config.Config, branch string) error {
 			sensitiveVars[v.Name] = v.Sensitive
 		}
 
+		if ef.Backup {
+			if err := env.BackupFile(ef.Path); err != nil {
+				return fmt.Errorf("backup %s: %w", ef.Path, err)
+			}
+		}
+
 		comments, err := env.ScanComments(ef.Path, cfg.Defaults.CollectComments)
 		if err != nil {
 			return fmt.Errorf("scanning %s: %w", ef.Path, err)

@@ -14,6 +14,7 @@ func TestGenerate(t *testing.T) {
 	checks := []string{
 		"project: myapp",
 		"path: .env.local",
+		"# backup: true",
 		"name: DB_NAME",
 		"strategy: template",
 		"on: checkout",

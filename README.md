@@ -124,6 +124,7 @@ defaults:
 
 env_files:
   - path: .env
+    backup: true             # write .env.bak before patching (optional, default false)
     vars:
       - name: DB_NAME
         strategy: template   # renders to e.g. myapp_feat-login
@@ -183,6 +184,22 @@ Output with `sensitive: true`:
 ```
 bight: .env → JWT_SECRET=***
 ```
+
+### Backup files (`backup`)
+
+Set `backup: true` on an env file entry to write a copy of the file to `{path}.bak` before each patch is applied. Useful for inspecting what changed or recovering a previous value.
+
+```yaml
+env_files:
+  - path: .env
+    backup: true
+    vars:
+      - name: DB_NAME
+        strategy: template
+        on: checkout
+```
+
+The backup is a verbatim copy of the file as it was immediately before patching. It is overwritten on each checkout — only the most recent pre-patch state is kept.
 
 ### Preserving comments (`collect-comments`)
 
