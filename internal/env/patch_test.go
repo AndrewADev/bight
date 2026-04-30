@@ -264,6 +264,46 @@ func TestPatchAll_TempFileRemovedOnError(t *testing.T) {
 	}
 }
 
+func TestBackupFile_CreatesBackup(t *testing.T) {
+	path := writeTempEnv(t, "KEY=original\n")
+	if err := os.Chmod(path, 0640); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := BackupFile(path); err != nil {
+		t.Fatalf("BackupFile: %v", err)
+	}
+
+	data, err := os.ReadFile(path + ".bak")
+	if err != nil {
+		t.Fatalf("reading backup: %v", err)
+	}
+	t.Cleanup(func() { os.Remove(path + ".bak") })
+
+	if string(data) != "KEY=original\n" {
+		t.Errorf("backup content = %q, want %q", string(data), "KEY=original\n")
+	}
+
+	fi, err := os.Stat(path + ".bak")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if fi.Mode().Perm() != 0640 {
+		t.Errorf("backup mode = %04o, want 0640", fi.Mode().Perm())
+	}
+}
+
+func TestBackupFile_NonExistentFile(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "does-not-exist.env")
+
+	if err := BackupFile(path); err != nil {
+		t.Errorf("BackupFile on missing file: %v, want nil", err)
+	}
+	if _, err := os.Stat(path + ".bak"); !os.IsNotExist(err) {
+		t.Errorf("expected no backup file, but it exists")
+	}
+}
+
 func TestPatch_IsTransactional(t *testing.T) {
 	path := writeTempEnv(t, "A=1\nB=2\n")
 

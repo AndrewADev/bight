@@ -3,12 +3,34 @@ package env
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/joho/godotenv"
 )
+
+func BackupFile(path string) error {
+	f, err := os.Open(path)
+	if os.IsNotExist(err) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	fi, err := f.Stat()
+	if err != nil {
+		return err
+	}
+	data, err := io.ReadAll(f)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path+".bak", data, fi.Mode().Perm())
+}
 
 func Patch(path, key, value string) error {
 	return PatchAll(path, map[string]string{key: value}, nil)

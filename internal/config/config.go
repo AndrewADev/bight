@@ -23,8 +23,9 @@ type Defaults struct {
 }
 
 type EnvFile struct {
-	Path string `yaml:"path"`
-	Vars []Var  `yaml:"vars"`
+	Path   string `yaml:"path"`
+	Backup bool   `yaml:"backup"`
+	Vars   []Var  `yaml:"vars"`
 }
 
 type Var struct {

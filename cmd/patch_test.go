@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/AndrewADev/bight/internal/config"
@@ -146,5 +148,69 @@ func TestDryRunEnvFiles_MultipleFilesAndVars(t *testing.T) {
 	}
 	if results[1].path != ".env.test" || results[1].varName != "TEST_DB" {
 		t.Errorf("result[1]: got %q/%q", results[1].path, results[1].varName)
+	}
+}
+
+func TestPatchEnvFiles_BackupCreated(t *testing.T) {
+	dir := t.TempDir()
+	envPath := filepath.Join(dir, ".env")
+	if err := os.WriteFile(envPath, []byte("DB_NAME=old\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := &config.Config{
+		Project: "myapp",
+		Defaults: config.Defaults{
+			BranchTemplate: "{{.Project}}_{{.Branch}}",
+		},
+		EnvFiles: []config.EnvFile{
+			{
+				Path:   envPath,
+				Backup: true,
+				Vars:   []config.Var{{Name: "DB_NAME", Strategy: "template", On: "checkout"}},
+			},
+		},
+	}
+
+	if err := patchEnvFiles(cfg, "feature-x"); err != nil {
+		t.Fatalf("patchEnvFiles: %v", err)
+	}
+
+	data, err := os.ReadFile(envPath + ".bak")
+	if err != nil {
+		t.Fatalf("reading backup: %v", err)
+	}
+	if string(data) != "DB_NAME=old\n" {
+		t.Errorf("backup content = %q, want %q", string(data), "DB_NAME=old\n")
+	}
+}
+
+func TestPatchEnvFiles_NoBackupByDefault(t *testing.T) {
+	dir := t.TempDir()
+	envPath := filepath.Join(dir, ".env")
+	if err := os.WriteFile(envPath, []byte("DB_NAME=old\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := &config.Config{
+		Project: "myapp",
+		Defaults: config.Defaults{
+			BranchTemplate: "{{.Project}}_{{.Branch}}",
+		},
+		EnvFiles: []config.EnvFile{
+			{
+				Path:   envPath,
+				Backup: false,
+				Vars:   []config.Var{{Name: "DB_NAME", Strategy: "template", On: "checkout"}},
+			},
+		},
+	}
+
+	if err := patchEnvFiles(cfg, "feature-x"); err != nil {
+		t.Fatalf("patchEnvFiles: %v", err)
+	}
+
+	if _, err := os.Stat(envPath + ".bak"); !os.IsNotExist(err) {
+		t.Errorf("expected no backup file, but it exists")
 	}
 }
