@@ -70,12 +70,22 @@ func runChecks(cfg *config.Config, cfgErr error, deps checkDeps) []result {
 		return results
 	}
 
-	// Check 5: env files exist (warn only)
+	// Check 5: env files exist (warn only) + inert files with no checkout vars (info)
 	for _, ef := range cfg.EnvFiles {
 		if deps.existingEnvFiles[ef.Path] {
 			results = append(results, ok(fmt.Sprintf("env file: %s", ef.Path)))
 		} else {
 			results = append(results, warn(fmt.Sprintf("env file: %s — not found (will be created on first patch)", ef.Path)))
+		}
+
+		applicable := 0
+		for _, v := range ef.Vars {
+			if v.On == "checkout" {
+				applicable++
+			}
+		}
+		if applicable == 0 {
+			results = append(results, info(fmt.Sprintf("env file: %s — no vars apply on checkout; file will be left untouched", ef.Path)))
 		}
 	}
 

@@ -185,6 +185,112 @@ func TestPatchEnvFiles_BackupCreated(t *testing.T) {
 	}
 }
 
+func TestPatchEnvFiles_SkipsWhenNoVars(t *testing.T) {
+	dir := t.TempDir()
+	envPath := filepath.Join(dir, ".env")
+	original := []byte("DB_NAME=keep\n# a comment\nOTHER=val\n")
+	if err := os.WriteFile(envPath, original, 0600); err != nil {
+		t.Fatal(err)
+	}
+	before, err := os.Stat(envPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := &config.Config{
+		Project: "myapp",
+		EnvFiles: []config.EnvFile{
+			{Path: envPath, Vars: nil},
+		},
+	}
+
+	if err := patchEnvFiles(cfg, "feature-x"); err != nil {
+		t.Fatalf("patchEnvFiles: %v", err)
+	}
+
+	got, err := os.ReadFile(envPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != string(original) {
+		t.Errorf("file content changed: got %q, want %q", got, original)
+	}
+	after, err := os.Stat(envPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !before.ModTime().Equal(after.ModTime()) {
+		t.Errorf("mtime changed: before %v, after %v", before.ModTime(), after.ModTime())
+	}
+}
+
+func TestPatchEnvFiles_SkipsWhenAllVarsNonCheckout(t *testing.T) {
+	dir := t.TempDir()
+	envPath := filepath.Join(dir, ".env")
+	original := []byte("DB_NAME=keep\n")
+	if err := os.WriteFile(envPath, original, 0600); err != nil {
+		t.Fatal(err)
+	}
+	before, err := os.Stat(envPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := &config.Config{
+		Project: "myapp",
+		EnvFiles: []config.EnvFile{
+			{
+				Path: envPath,
+				Vars: []config.Var{
+					{Name: "DB_NAME", Strategy: "template", On: "db_create"},
+				},
+			},
+		},
+	}
+
+	if err := patchEnvFiles(cfg, "feature-x"); err != nil {
+		t.Fatalf("patchEnvFiles: %v", err)
+	}
+
+	got, err := os.ReadFile(envPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != string(original) {
+		t.Errorf("file content changed: got %q, want %q", got, original)
+	}
+	after, err := os.Stat(envPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !before.ModTime().Equal(after.ModTime()) {
+		t.Errorf("mtime changed: before %v, after %v", before.ModTime(), after.ModTime())
+	}
+}
+
+func TestPatchEnvFiles_NoBackupWhenSkipped(t *testing.T) {
+	dir := t.TempDir()
+	envPath := filepath.Join(dir, ".env")
+	if err := os.WriteFile(envPath, []byte("DB_NAME=keep\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := &config.Config{
+		Project: "myapp",
+		EnvFiles: []config.EnvFile{
+			{Path: envPath, Backup: true, Vars: nil},
+		},
+	}
+
+	if err := patchEnvFiles(cfg, "feature-x"); err != nil {
+		t.Fatalf("patchEnvFiles: %v", err)
+	}
+
+	if _, err := os.Stat(envPath + ".bak"); !os.IsNotExist(err) {
+		t.Errorf("expected no backup file, but it exists (or stat err: %v)", err)
+	}
+}
+
 func TestPatchEnvFiles_NoBackupByDefault(t *testing.T) {
 	dir := t.TempDir()
 	envPath := filepath.Join(dir, ".env")
