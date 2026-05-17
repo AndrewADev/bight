@@ -1,9 +1,12 @@
 package cmd
 
 import (
+	"errors"
 	"os"
+	"path/filepath"
 
 	"github.com/AndrewADev/bight/internal/config"
+	"github.com/AndrewADev/bight/internal/hook"
 )
 
 var configPath string
@@ -61,5 +64,38 @@ func loadConfig() (*config.Config, string, configSource, error) {
 		return cfg, p, sourceEnv, err
 	}
 	cfg, path, err := config.Load()
-	return cfg, path, sourceAuto, err
+	if err == nil {
+		return cfg, path, sourceAuto, nil
+	}
+	if !errors.Is(err, os.ErrNotExist) {
+		return cfg, path, sourceAuto, err
+	}
+	// Fallback: when cwd has no .bight.yml, look in the main worktree root.
+	// This makes linked worktrees inherit the main worktree's config, the
+	// same way they already inherit hooks via the shared common git dir.
+	// Without this, `git worktree add` into a clean directory lands in a
+	// worktree where bight is a silent no-op — which defeats the whole
+	// point of the `copy:` feature.
+	root, rerr := hook.MainWorktreeRoot()
+	if rerr != nil {
+		return nil, "", sourceAuto, err // surface original ErrNotExist
+	}
+	cwd, _ := os.Getwd()
+	cwdAbs, _ := filepath.Abs(cwd)
+	rootAbs, _ := filepath.Abs(root)
+	if cwdAbs == rootAbs {
+		// We're already in the main worktree; no fallback location to try.
+		return nil, "", sourceAuto, err
+	}
+	for _, name := range []string{".bight.yml", ".bight.yaml"} {
+		p := filepath.Join(root, name)
+		c, _, ferr := config.LoadFrom(p)
+		if ferr == nil {
+			return c, p, sourceAuto, nil
+		}
+		if !errors.Is(ferr, os.ErrNotExist) {
+			return nil, "", sourceAuto, ferr
+		}
+	}
+	return nil, "", sourceAuto, err
 }

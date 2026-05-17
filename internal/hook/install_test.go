@@ -79,3 +79,42 @@ func TestHooksDir_MissingCommondir(t *testing.T) {
 		t.Errorf("expected commondir error, got %v", err)
 	}
 }
+
+func TestMainWorktreeRoot_RegularRepo(t *testing.T) {
+	dir := makeHooksDir(t)
+	got, err := mainWorktreeRoot(dir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// In a regular repo, the main worktree root is the dir containing .git.
+	if got != dir {
+		t.Errorf("got %q, want %q", got, dir)
+	}
+}
+
+func TestMainWorktreeRoot_Worktree(t *testing.T) {
+	// Layout: <main>/.git is a directory; <wt>/.git is a file pointing at
+	// <main>/.git/worktrees/<name>; that dir's commondir → <main>/.git.
+	main := makeHooksDir(t)
+	worktreeGitDir := filepath.Join(main, ".git", "worktrees", "my-branch")
+	if err := os.MkdirAll(worktreeGitDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(worktreeGitDir, "commondir"), []byte("../.."), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	wt := t.TempDir()
+	gitFile := "gitdir: " + worktreeGitDir
+	if err := os.WriteFile(filepath.Join(wt, ".git"), []byte(gitFile), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := mainWorktreeRoot(wt)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != main {
+		t.Errorf("got %q, want %q", got, main)
+	}
+}

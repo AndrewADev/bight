@@ -25,7 +25,44 @@ type Defaults struct {
 type EnvFile struct {
 	Path   string `yaml:"path"`
 	Backup bool   `yaml:"backup"`
+	Copy   *Copy  `yaml:"copy"`
 	Vars   []Var  `yaml:"vars"`
+}
+
+// Copy describes how to seed an env file by copying it from elsewhere.
+// In YAML, copy may be given as either a scalar (the source path, with
+// Overwrite defaulting to false) or a mapping with explicit source and
+// overwrite fields:
+//
+//	copy: ../main/.env
+//	copy: { source: ../main/.env, overwrite: true }
+//
+// Overwrite controls only the file copy step. Var patching always rewrites
+// the keys it targets regardless of this setting.
+type Copy struct {
+	Source    string `yaml:"source"`
+	Overwrite bool   `yaml:"overwrite"`
+}
+
+// UnmarshalYAML allows `copy:` to be either a scalar (treated as the source
+// path) or a full mapping with source + overwrite.
+func (c *Copy) UnmarshalYAML(value *yaml.Node) error {
+	switch value.Kind {
+	case yaml.ScalarNode:
+		c.Source = value.Value
+		return nil
+	case yaml.MappingNode:
+		// Use an alias type to avoid recursing into this UnmarshalYAML.
+		type rawCopy Copy
+		var raw rawCopy
+		if err := value.Decode(&raw); err != nil {
+			return err
+		}
+		*c = Copy(raw)
+		return nil
+	default:
+		return fmt.Errorf("copy: expected scalar or mapping, got %v", value.Kind)
+	}
 }
 
 type Var struct {
