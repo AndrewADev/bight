@@ -126,6 +126,23 @@ func TestRunChecks_EnvFileMissing(t *testing.T) {
 	}
 }
 
+func TestRunChecks_EnvFileNoCheckoutVars(t *testing.T) {
+	cfg := &config.Config{
+		Project: "myapp",
+		EnvFiles: []config.EnvFile{
+			{Path: ".env", Vars: nil},
+		},
+	}
+	results := runChecks(cfg, nil, happyDeps)
+	r, found := findByPrefix(results, "env file: .env — no vars apply on checkout")
+	if !found {
+		t.Fatalf("expected info line for env file with no checkout vars, got: %v", results)
+	}
+	if r.status != "info" {
+		t.Errorf("expected info status, got %q", r.status)
+	}
+}
+
 func TestRunChecks_UnknownStrategy(t *testing.T) {
 	cfg := &config.Config{
 		Project: "myapp",
