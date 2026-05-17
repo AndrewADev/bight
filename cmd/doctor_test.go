@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -172,5 +174,93 @@ func TestRunChecks_UnknownTrigger(t *testing.T) {
 	r, found := findByPrefix(results, "vars: unknown trigger in:")
 	if !found || r.status != "fail" {
 		t.Errorf("expected fail for unknown trigger, got: %v", r)
+	}
+}
+
+func TestRunChecks_WorktreeInitTriggerIsValid(t *testing.T) {
+	cfg := &config.Config{
+		Project: "myapp",
+		EnvFiles: []config.EnvFile{
+			{Path: ".env", Vars: []config.Var{
+				{Name: "PROJECT_UUID", Strategy: "random", On: "worktree-init"},
+				{Name: "JWT", Strategy: "random", On: "checkout"},
+			}},
+		},
+	}
+	results := runChecks(cfg, nil, happyDeps)
+	r, found := findByPrefix(results, "vars: all triggers valid")
+	if !found || r.status != "ok" {
+		t.Errorf("expected ok for worktree-init trigger, got: %v", r)
+	}
+}
+
+func TestRunChecks_CopySourceMissing(t *testing.T) {
+	cfg := &config.Config{
+		Project: "myapp",
+		EnvFiles: []config.EnvFile{
+			{
+				Path: ".env",
+				Copy: &config.Copy{Source: "../nonexistent/.env"},
+				Vars: []config.Var{
+					{Name: "DB_NAME", Strategy: "template", On: "checkout"},
+				},
+			},
+		},
+	}
+	deps := happyDeps
+	deps.resolvedCopySources = map[string]string{".env": "/path/that/does/not/exist/.env"}
+	results := runChecks(cfg, nil, deps)
+	r, found := findByPrefix(results, "copy sources: missing/unreadable")
+	if !found || r.status != "fail" {
+		t.Errorf("expected fail for missing copy source, got: %v", r)
+	}
+}
+
+func TestRunChecks_CopySourceExists(t *testing.T) {
+	dir := t.TempDir()
+	src := filepath.Join(dir, "main.env")
+	if err := os.WriteFile(src, []byte("SEED=1\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cfg := &config.Config{
+		Project: "myapp",
+		EnvFiles: []config.EnvFile{
+			{
+				Path: ".env",
+				Copy: &config.Copy{Source: src},
+				Vars: []config.Var{
+					{Name: "DB_NAME", Strategy: "template", On: "checkout"},
+				},
+			},
+		},
+	}
+	deps := happyDeps
+	deps.resolvedCopySources = map[string]string{".env": src}
+	results := runChecks(cfg, nil, deps)
+	r, found := findByPrefix(results, "copy sources: ")
+	if !found || r.status != "ok" {
+		t.Errorf("expected ok for existing copy source, got: %v", r)
+	}
+}
+
+func TestRunChecks_CopySourceResolveError(t *testing.T) {
+	cfg := &config.Config{
+		Project: "myapp",
+		EnvFiles: []config.EnvFile{
+			{
+				Path: ".env",
+				Copy: &config.Copy{Source: "../relative/.env"},
+				Vars: []config.Var{
+					{Name: "DB_NAME", Strategy: "template", On: "checkout"},
+				},
+			},
+		},
+	}
+	deps := happyDeps
+	deps.copyResolveErrors = map[string]error{".env": errors.New("base directory unknown")}
+	results := runChecks(cfg, nil, deps)
+	r, found := findByPrefix(results, "copy sources: missing/unreadable")
+	if !found || r.status != "fail" {
+		t.Errorf("expected fail for resolve error, got: %v", r)
 	}
 }
