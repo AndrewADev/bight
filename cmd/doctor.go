@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/AndrewADev/bight/internal/config"
+	bcopy "github.com/AndrewADev/bight/internal/copy"
 	"github.com/AndrewADev/bight/internal/hook"
 	"github.com/AndrewADev/bight/internal/output"
 	"github.com/spf13/cobra"
@@ -29,6 +30,12 @@ type checkDeps struct {
 	existingEnvFiles map[string]bool
 	cfgPath          string
 	cfgSource        configSource
+	// resolvedCopySources maps `ef.Path -> resolved absolute source path`
+	// for every env_file with a Copy configured. Empty if a Copy is
+	// configured but the source path could not be resolved (treated as a
+	// failure by the doctor check).
+	resolvedCopySources map[string]string
+	copyResolveErrors   map[string]error
 }
 
 func runChecks(cfg *config.Config, cfgErr error, deps checkDeps) []result {
@@ -112,7 +119,7 @@ func runChecks(cfg *config.Config, cfgErr error, deps checkDeps) []result {
 	}
 
 	// Check 7: triggers valid
-	validTriggers := map[string]bool{"checkout": true}
+	validTriggers := map[string]bool{EventCheckout: true, EventWorktreeInit: true}
 	var badTriggers []string
 	for _, ef := range cfg.EnvFiles {
 		for _, v := range ef.Vars {
@@ -125,6 +132,35 @@ func runChecks(cfg *config.Config, cfgErr error, deps checkDeps) []result {
 		results = append(results, fail(fmt.Sprintf("vars: unknown trigger in: %v", badTriggers)))
 	} else {
 		results = append(results, ok("vars: all triggers valid"))
+	}
+
+	// Check 8: copy sources resolve and exist (only for env_files with copy configured)
+	var copyConfigured int
+	var badCopySources []string
+	for _, ef := range cfg.EnvFiles {
+		if ef.Copy == nil {
+			continue
+		}
+		copyConfigured++
+		if err, has := deps.copyResolveErrors[ef.Path]; has && err != nil {
+			badCopySources = append(badCopySources, fmt.Sprintf("%s ← %q: %v", ef.Path, ef.Copy.Source, err))
+			continue
+		}
+		resolved, has := deps.resolvedCopySources[ef.Path]
+		if !has {
+			badCopySources = append(badCopySources, fmt.Sprintf("%s ← %q: not resolved", ef.Path, ef.Copy.Source))
+			continue
+		}
+		if _, err := os.Stat(resolved); err != nil {
+			badCopySources = append(badCopySources, fmt.Sprintf("%s ← %s: %v", ef.Path, resolved, err))
+		}
+	}
+	if copyConfigured > 0 {
+		if len(badCopySources) > 0 {
+			results = append(results, fail(fmt.Sprintf("copy sources: missing/unreadable: %v", badCopySources)))
+		} else {
+			results = append(results, ok(fmt.Sprintf("copy sources: %d configured, all reachable", copyConfigured)))
+		}
 	}
 
 	return results
@@ -156,18 +192,41 @@ func doctorCmd() *cobra.Command {
 			cfg, cfgPath, cfgSource, cfgErr := loadConfig()
 
 			existing := map[string]bool{}
+			resolvedSources := map[string]string{}
+			resolveErrs := map[string]error{}
 			if cfg != nil {
 				for _, ef := range cfg.EnvFiles {
 					_, err := os.Stat(ef.Path)
 					existing[ef.Path] = err == nil
 				}
+
+				// Resolve copy sources up-front so runChecks can be purely
+				// validation logic.
+				var mainRoot string
+				if root, err := hook.MainWorktreeRoot(); err == nil {
+					mainRoot = root
+				}
+				homeDir, _ := os.UserHomeDir()
+				for _, ef := range cfg.EnvFiles {
+					if ef.Copy == nil {
+						continue
+					}
+					src, err := bcopy.ResolveSource(ef.Copy.Source, mainRoot, homeDir)
+					if err != nil {
+						resolveErrs[ef.Path] = err
+						continue
+					}
+					resolvedSources[ef.Path] = src
+				}
 			}
 			results := runChecks(cfg, cfgErr, checkDeps{
-				gitOK:            gitErr == nil,
-				hookErr:          hook.Check(),
-				existingEnvFiles: existing,
-				cfgPath:          cfgPath,
-				cfgSource:        cfgSource,
+				gitOK:               gitErr == nil,
+				hookErr:             hook.Check(),
+				existingEnvFiles:    existing,
+				cfgPath:             cfgPath,
+				cfgSource:           cfgSource,
+				resolvedCopySources: resolvedSources,
+				copyResolveErrors:   resolveErrs,
 			})
 
 			fmt.Println("bight doctor:")

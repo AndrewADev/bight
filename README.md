@@ -243,7 +243,47 @@ Comments are always written after the key=value pairs.
 
 | Value | When |
 |---|---|
-| `checkout` | Every branch switch |
+| `checkout` | Every branch checkout, including the very first one for this worktree. Use for values you want refreshed on every branch switch. |
+| `worktree-init` | Only the first branch checkout this worktree experiences — i.e. when the destination env file did not exist before this run (or was just seeded via `copy`). Strict subset of `checkout`. Use for values you want stamped exactly once per worktree. |
+
+Both events have the new branch available to strategies (so `{{.Branch}}` works in either).
+
+### Seeding env files (`copy`)
+
+When you `git worktree add` a new working tree, you land in a clean directory with no `.env`. Set `copy` on an env file to seed it from somewhere — typically the same file in the main worktree:
+
+```yaml
+env_files:
+  - path: .env
+    copy: ../main/.env        # short form: just the source path
+    vars:
+      - name: JWT_SECRET
+        strategy: random
+        on: checkout
+```
+
+Source paths may be:
+
+- absolute (`/path/to/.env`)
+- `~`-prefixed (`~/envs/myapp.env`)
+- relative — resolved against the **main worktree root**, not the current working directory. This is what makes `../main/.env` work the same from every linked worktree.
+
+If you need to control overwrite behavior, use the mapping form:
+
+```yaml
+env_files:
+  - path: .env
+    copy:
+      source: ../main/.env
+      overwrite: true         # clobber an existing .env on init
+```
+
+**`overwrite` behavior:**
+
+- `false` (default) — if `.env` already exists, the copy is skipped and a warning is printed. `worktree-init` vars do **not** fire (the file wasn't being initialized in this run).
+- `true` — if `.env` already exists it is replaced (after the `backup` step, if `backup: true`). `worktree-init` vars then fire on the freshly seeded file.
+
+`overwrite` controls only the file copy. Var patching always rewrites the keys it targets regardless of this setting.
 
 ### Global config (`~/.bight.yml`)
 

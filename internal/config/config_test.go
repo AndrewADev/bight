@@ -313,6 +313,133 @@ env_files:
 	}
 }
 
+func TestLoad_CopyShortForm(t *testing.T) {
+	yaml := `
+project: myapp
+env_files:
+  - path: .env
+    copy: ../main/.env
+    vars:
+      - name: DB_NAME
+        strategy: template
+        on: checkout
+`
+	f, err := os.CreateTemp("", "bight-*.yml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(f.Name())
+	f.WriteString(yaml)
+	f.Close()
+
+	cfg, err := load(f.Name())
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	ef := cfg.EnvFiles[0]
+	if ef.Copy == nil {
+		t.Fatal("Copy is nil, expected populated from short form")
+	}
+	if ef.Copy.Source != "../main/.env" {
+		t.Errorf("Copy.Source = %q, want %q", ef.Copy.Source, "../main/.env")
+	}
+	if ef.Copy.Overwrite {
+		t.Errorf("Copy.Overwrite = true, want false (default)")
+	}
+}
+
+func TestLoad_CopyMappingForm(t *testing.T) {
+	yaml := `
+project: myapp
+env_files:
+  - path: .env
+    copy:
+      source: /abs/path/.env
+      overwrite: true
+    vars: []
+`
+	f, err := os.CreateTemp("", "bight-*.yml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(f.Name())
+	f.WriteString(yaml)
+	f.Close()
+
+	cfg, err := load(f.Name())
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	ef := cfg.EnvFiles[0]
+	if ef.Copy == nil {
+		t.Fatal("Copy is nil, expected populated from mapping form")
+	}
+	if ef.Copy.Source != "/abs/path/.env" {
+		t.Errorf("Copy.Source = %q", ef.Copy.Source)
+	}
+	if !ef.Copy.Overwrite {
+		t.Errorf("Copy.Overwrite = false, want true")
+	}
+}
+
+func TestLoad_CopyOmittedIsNil(t *testing.T) {
+	yaml := `
+project: myapp
+env_files:
+  - path: .env
+    vars: []
+`
+	f, err := os.CreateTemp("", "bight-*.yml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(f.Name())
+	f.WriteString(yaml)
+	f.Close()
+
+	cfg, err := load(f.Name())
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	if cfg.EnvFiles[0].Copy != nil {
+		t.Errorf("Copy should be nil when omitted, got %+v", cfg.EnvFiles[0].Copy)
+	}
+}
+
+func TestLoad_WorktreeInitTrigger(t *testing.T) {
+	yaml := `
+project: myapp
+env_files:
+  - path: .env
+    vars:
+      - name: PROJECT_UUID
+        strategy: random
+        on: worktree-init
+      - name: JWT
+        strategy: random
+        on: checkout
+`
+	f, err := os.CreateTemp("", "bight-*.yml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(f.Name())
+	f.WriteString(yaml)
+	f.Close()
+
+	cfg, err := load(f.Name())
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	vars := cfg.EnvFiles[0].Vars
+	if vars[0].On != "worktree-init" {
+		t.Errorf("Vars[0].On = %q, want %q", vars[0].On, "worktree-init")
+	}
+	if vars[1].On != "checkout" {
+		t.Errorf("Vars[1].On = %q, want %q", vars[1].On, "checkout")
+	}
+}
+
 func TestLoad_SensitiveField(t *testing.T) {
 	yaml := `
 project: myapp

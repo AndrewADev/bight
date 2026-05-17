@@ -17,6 +17,36 @@ func HooksDir() (string, error) {
 }
 
 func hooksDir(dir string) (string, error) {
+	commonDir, err := commonGitDir(dir)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(commonDir, "hooks"), nil
+}
+
+// MainWorktreeRoot returns the working-tree directory of the main worktree
+// for the repo at the current working directory. In a regular repo this is
+// the same directory; in a linked worktree it resolves to the main repo's
+// working directory via commondir.
+func MainWorktreeRoot() (string, error) {
+	return mainWorktreeRoot(".")
+}
+
+func mainWorktreeRoot(dir string) (string, error) {
+	commonDir, err := commonGitDir(dir)
+	if err != nil {
+		return "", err
+	}
+	// commonDir points to the main repo's .git directory; its parent is the
+	// main worktree's working directory.
+	return filepath.Dir(commonDir), nil
+}
+
+// commonGitDir returns the path to the main repo's .git directory (the
+// "common" git dir), resolved relative to the directory `dir`. For a
+// regular repo this is just <dir>/.git; for a worktree it's the directory
+// pointed at by the worktree's commondir file.
+func commonGitDir(dir string) (string, error) {
 	dotGit := filepath.Join(dir, ".git")
 	info, err := os.Stat(dotGit)
 	if err != nil {
@@ -24,7 +54,7 @@ func hooksDir(dir string) (string, error) {
 	}
 
 	if info.IsDir() {
-		return filepath.Join(dotGit, "hooks"), nil
+		return dotGit, nil
 	}
 
 	// .git is a file — we're in a worktree. Format: "gitdir: <path>"
@@ -49,7 +79,7 @@ func hooksDir(dir string) (string, error) {
 		commonDir = filepath.Join(worktreeGitDir, commonDir)
 	}
 
-	return filepath.Join(filepath.Clean(commonDir), "hooks"), nil
+	return filepath.Clean(commonDir), nil
 }
 
 func Install() error {
