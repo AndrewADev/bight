@@ -49,6 +49,16 @@ Each release includes a `checksums.txt` for verification:
 sha256sum -c checksums.txt --ignore-missing
 ```
 
+**Trying a PR preview:**
+
+For any pushed commit (including from a fork), you can install directly from source:
+
+```sh
+go install github.com/AndrewADev/bight@<commit-sha-or-branch>
+```
+
+For users without a Go toolchain, a maintainer can run the `Preview` workflow on the PR (Actions → Preview → Run workflow → enter PR number). Binaries for each platform — plus a `checksums.txt` — are then attached to the run as artifacts, downloadable from the run page by anyone with read access to the repo. Preview binaries report a version like `v0.0.0-preview-pr<N>-<sha>` so they can't be mistaken for a release.
+
 ## Getting started
 
 ### 1. Install
