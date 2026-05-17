@@ -29,7 +29,7 @@ func installCmd() *cobra.Command {
 }
 
 func promptInitConfig() error {
-	if _, err := config.Load(); err == nil {
+	if _, _, err := config.Load(); err == nil {
 		return nil
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return err

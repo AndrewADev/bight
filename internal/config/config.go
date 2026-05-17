@@ -62,8 +62,9 @@ func merge(global, repo *Config) *Config {
 
 // LoadFrom loads config from a specific repo config file path, merging with
 // the global config (~/.bight.yml) as usual. Unlike Load, it does not search
-// for .bight.yml or .bight.yaml in the current directory.
-func LoadFrom(repoConfigPath string) (*Config, error) {
+// for .bight.yml or .bight.yaml in the current directory. The returned path
+// is the repo config path that was loaded.
+func LoadFrom(repoConfigPath string) (*Config, string, error) {
 	var global *Config
 	if path, ok := globalConfigPath(); ok {
 		if g, err := load(path); err == nil {
@@ -77,17 +78,22 @@ func LoadFrom(repoConfigPath string) (*Config, error) {
 
 	repo, err := load(repoConfigPath)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	if global != nil {
-		return merge(global, repo), nil
+		return merge(global, repo), repoConfigPath, nil
 	}
-	return repo, nil
+	return repo, repoConfigPath, nil
 }
 
-func Load() (*Config, error) {
+// Load discovers and loads config. It returns the loaded config along with
+// the path that was loaded — either the matched repo config filename in the
+// current directory (".bight.yml" or ".bight.yaml") or, if only the global
+// config exists, the global config path.
+func Load() (*Config, string, error) {
 	var global *Config
+	var globalPath string
 	if path, ok := globalConfigPath(); ok {
 		if g, err := load(path); err == nil {
 			if len(g.EnvFiles) > 0 {
@@ -95,31 +101,34 @@ func Load() (*Config, error) {
 				g.EnvFiles = nil
 			}
 			global = g
+			globalPath = path
 		}
 		// silently ignore missing or unreadable global config
 	}
 
 	var repo *Config
+	var repoPath string
 	for _, name := range []string{".bight.yml", ".bight.yaml"} {
 		r, err := load(name)
 		if err == nil {
 			repo = r
+			repoPath = name
 			break
 		}
 		if !os.IsNotExist(err) {
-			return nil, err
+			return nil, "", err
 		}
 	}
 
 	switch {
 	case repo != nil && global != nil:
-		return merge(global, repo), nil
+		return merge(global, repo), repoPath, nil
 	case repo != nil:
-		return repo, nil
+		return repo, repoPath, nil
 	case global != nil:
-		return global, nil
+		return global, globalPath, nil
 	default:
-		return nil, os.ErrNotExist
+		return nil, "", os.ErrNotExist
 	}
 }
 

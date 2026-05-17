@@ -22,7 +22,7 @@ func runCmd() *cobra.Command {
 				return err
 			}
 
-			cfg, err := loadConfig()
+			cfg, _, _, err := loadConfig()
 			if errors.Is(err, os.ErrNotExist) {
 				return fmt.Errorf("no .bight.yml or .bight.yaml found in current directory")
 			}

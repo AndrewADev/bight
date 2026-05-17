@@ -156,6 +156,15 @@ bight doctor --config path/to/custom.bight.yml
 
 `--config` is a global flag — it works with any subcommand that reads config.
 
+Alternatively, set the `BIGHT_CONFIG` environment variable. This is convenient for the `post-checkout` hook itself or CI jobs where passing a flag is awkward:
+
+```sh
+export BIGHT_CONFIG=path/to/custom.bight.yml
+bight doctor   # picks up BIGHT_CONFIG automatically
+```
+
+Precedence: `--config` > `BIGHT_CONFIG` > auto-discovery of `.bight.yml` in the current directory. If `BIGHT_CONFIG` points to a missing or unreadable file, `bight` will error rather than silently falling back to auto-discovery. `bight doctor` reports which source was used.
+
 ### Manual patching
 
 To apply env patching for the current branch without switching:
