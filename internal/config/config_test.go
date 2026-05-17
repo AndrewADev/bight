@@ -313,6 +313,99 @@ env_files:
 	}
 }
 
+func TestLoad_CopyShortForm(t *testing.T) {
+	yaml := `
+project: myapp
+env_files:
+  - path: .env
+    copy: ../main/.env
+    vars:
+      - name: DB_NAME
+        strategy: template
+        on: checkout
+`
+	f, err := os.CreateTemp("", "bight-*.yml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(f.Name())
+	f.WriteString(yaml)
+	f.Close()
+
+	cfg, err := load(f.Name())
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	ef := cfg.EnvFiles[0]
+	if ef.Copy == nil {
+		t.Fatal("Copy is nil, expected populated from short form")
+	}
+	if ef.Copy.Source != "../main/.env" {
+		t.Errorf("Copy.Source = %q, want %q", ef.Copy.Source, "../main/.env")
+	}
+	if ef.Copy.Overwrite {
+		t.Errorf("Copy.Overwrite = true, want false (default)")
+	}
+}
+
+func TestLoad_CopyMappingForm(t *testing.T) {
+	yaml := `
+project: myapp
+env_files:
+  - path: .env
+    copy:
+      source: /abs/path/.env
+      overwrite: true
+    vars: []
+`
+	f, err := os.CreateTemp("", "bight-*.yml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(f.Name())
+	f.WriteString(yaml)
+	f.Close()
+
+	cfg, err := load(f.Name())
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	ef := cfg.EnvFiles[0]
+	if ef.Copy == nil {
+		t.Fatal("Copy is nil, expected populated from mapping form")
+	}
+	if ef.Copy.Source != "/abs/path/.env" {
+		t.Errorf("Copy.Source = %q", ef.Copy.Source)
+	}
+	if !ef.Copy.Overwrite {
+		t.Errorf("Copy.Overwrite = false, want true")
+	}
+}
+
+func TestLoad_CopyOmittedIsNil(t *testing.T) {
+	yaml := `
+project: myapp
+env_files:
+  - path: .env
+    vars: []
+`
+	f, err := os.CreateTemp("", "bight-*.yml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(f.Name())
+	f.WriteString(yaml)
+	f.Close()
+
+	cfg, err := load(f.Name())
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	if cfg.EnvFiles[0].Copy != nil {
+		t.Errorf("Copy should be nil when omitted, got %+v", cfg.EnvFiles[0].Copy)
+	}
+}
+
 func TestLoad_SensitiveField(t *testing.T) {
 	yaml := `
 project: myapp

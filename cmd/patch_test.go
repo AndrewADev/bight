@@ -3,6 +3,7 @@ package cmd
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/AndrewADev/bight/internal/config"
@@ -288,6 +289,130 @@ func TestPatchEnvFiles_NoBackupWhenSkipped(t *testing.T) {
 
 	if _, err := os.Stat(envPath + ".bak"); !os.IsNotExist(err) {
 		t.Errorf("expected no backup file, but it exists (or stat err: %v)", err)
+	}
+}
+
+func TestPatchEnvFiles_CopyWhenDestMissing(t *testing.T) {
+	dir := t.TempDir()
+	srcDir := t.TempDir()
+	srcPath := filepath.Join(srcDir, ".env")
+	if err := os.WriteFile(srcPath, []byte("SEEDED=from-source\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	envPath := filepath.Join(dir, ".env") // does not exist yet
+
+	cfg := &config.Config{
+		Project: "myapp",
+		EnvFiles: []config.EnvFile{
+			{
+				Path: envPath,
+				Copy: &config.Copy{Source: srcPath},
+				Vars: []config.Var{
+					{Name: "JWT_SECRET", Strategy: "random", On: "checkout"},
+				},
+			},
+		},
+	}
+
+	if err := patchEnvFiles(cfg, "feat-x"); err != nil {
+		t.Fatalf("patchEnvFiles: %v", err)
+	}
+
+	data, err := os.ReadFile(envPath)
+	if err != nil {
+		t.Fatalf("reading dest: %v", err)
+	}
+	s := string(data)
+	if !strings.Contains(s, "SEEDED=") {
+		t.Errorf("expected dest to contain SEEDED= (from copy), got: %q", s)
+	}
+	if !strings.Contains(s, "JWT_SECRET=") {
+		t.Errorf("expected dest to contain JWT_SECRET= (checkout var applied after copy), got: %q", s)
+	}
+}
+
+func TestPatchEnvFiles_NoCopyWhenDestExistsAndOverwriteFalse(t *testing.T) {
+	dir := t.TempDir()
+	srcDir := t.TempDir()
+	srcPath := filepath.Join(srcDir, ".env")
+	if err := os.WriteFile(srcPath, []byte("SEEDED=from-source\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	envPath := filepath.Join(dir, ".env")
+	if err := os.WriteFile(envPath, []byte("PREEXISTING=hi\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := &config.Config{
+		EnvFiles: []config.EnvFile{
+			{
+				Path: envPath,
+				Copy: &config.Copy{Source: srcPath, Overwrite: false},
+				Vars: []config.Var{
+					{Name: "JWT_SECRET", Strategy: "random", On: "checkout"},
+				},
+			},
+		},
+	}
+
+	if err := patchEnvFiles(cfg, "feat-x"); err != nil {
+		t.Fatalf("patchEnvFiles: %v", err)
+	}
+
+	data, _ := os.ReadFile(envPath)
+	s := string(data)
+	if strings.Contains(s, "SEEDED=") {
+		t.Errorf("dest unexpectedly contains SEEDED= (copy should have been skipped): %q", s)
+	}
+	if !strings.Contains(s, "PREEXISTING=") {
+		t.Errorf("dest lost PREEXISTING=: %q", s)
+	}
+	if !strings.Contains(s, "JWT_SECRET=") {
+		t.Errorf("dest missing JWT_SECRET= (checkout vars should still fire): %q", s)
+	}
+}
+
+func TestPatchEnvFiles_OverwriteClobbers(t *testing.T) {
+	dir := t.TempDir()
+	srcDir := t.TempDir()
+	srcPath := filepath.Join(srcDir, ".env")
+	if err := os.WriteFile(srcPath, []byte("SEEDED=fresh\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	envPath := filepath.Join(dir, ".env")
+	if err := os.WriteFile(envPath, []byte("OLD=ghost\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := &config.Config{
+		EnvFiles: []config.EnvFile{
+			{
+				Path:   envPath,
+				Backup: true,
+				Copy:   &config.Copy{Source: srcPath, Overwrite: true},
+			},
+		},
+	}
+
+	if err := patchEnvFiles(cfg, "feat-x"); err != nil {
+		t.Fatalf("patchEnvFiles: %v", err)
+	}
+
+	data, _ := os.ReadFile(envPath)
+	s := string(data)
+	if !strings.Contains(s, "SEEDED=") {
+		t.Errorf("dest should contain SEEDED= after overwrite: %q", s)
+	}
+	if strings.Contains(s, "OLD=") {
+		t.Errorf("dest should not contain OLD= after overwrite: %q", s)
+	}
+
+	bak, err := os.ReadFile(envPath + ".bak")
+	if err != nil {
+		t.Fatalf("backup missing: %v", err)
+	}
+	if string(bak) != "OLD=ghost\n" {
+		t.Errorf("backup = %q, want %q", bak, "OLD=ghost\n")
 	}
 }
 

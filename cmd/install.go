@@ -64,6 +64,19 @@ func promptInitConfig() error {
 		envFile = ".env"
 	}
 
+	var copySource string
+	fmt.Print("  Seed this file from another path on first worktree init? [y/N] ")
+	seedAnswer, _ := reader.ReadString('\n')
+	if v := strings.TrimSpace(seedAnswer); v == "y" || v == "Y" {
+		defaultSource := envFile
+		fmt.Printf("  Source path [%s]: ", defaultSource)
+		src, _ := reader.ReadString('\n')
+		copySource = strings.TrimSpace(src)
+		if copySource == "" {
+			copySource = defaultSource
+		}
+	}
+
 	var vars []config.Var
 	fmt.Print("  Add env vars to track? [Y/n] ")
 	addVars, _ := reader.ReadString('\n')
@@ -89,7 +102,7 @@ func promptInitConfig() error {
 		}
 	}
 
-	if err := os.WriteFile(".bight.yml", []byte(config.Generate(project, envFile, vars)), 0o644); err != nil {
+	if err := os.WriteFile(".bight.yml", []byte(config.Generate(project, envFile, copySource, vars)), 0o644); err != nil {
 		return err
 	}
 	fmt.Println(output.Green("bight: created .bight.yml"))

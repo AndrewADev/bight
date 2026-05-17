@@ -245,6 +245,43 @@ Comments are always written after the key=value pairs.
 |---|---|
 | `checkout` | Every branch switch |
 
+### Seeding env files (`copy`)
+
+When you `git worktree add` a new working tree, you land in a clean directory with no `.env`. Set `copy` on an env file to seed it from somewhere — typically the same file in the main worktree:
+
+```yaml
+env_files:
+  - path: .env
+    copy: ../main/.env        # short form: just the source path
+    vars:                     # Optional. Can be omitted when no branch-dependent variable updates desired.
+      - name: JWT_SECRET
+        strategy: random
+        on: checkout
+```
+
+Source paths may be:
+
+- absolute (`/path/to/.env`)
+- `~`-prefixed (`~/envs/myapp.env`)
+- relative — resolved against the **main worktree root**, not the current working directory. This is what makes `../main/.env` work the same from every linked worktree.
+
+If you need to control overwrite behavior, use the mapping form:
+
+```yaml
+env_files:
+  - path: .env
+    copy:
+      source: ../main/.env
+      overwrite: true         # clobber an existing .env on init
+```
+
+**`overwrite` behavior:**
+
+- `false` (default) — if `.env` already exists, the copy is silently skipped. `copy:` is a "seed if absent" declaration, not a per-checkout request — once the file exists, bight leaves it alone. To see whether bight thinks it would copy, use `bight doctor` or `bight run --dry-run`.
+- `true` — if `.env` already exists it is replaced (after the `backup` step, if `backup: true`).
+
+`overwrite` controls only the file copy. Var patching always rewrites the keys it targets regardless of this setting.
+
 ### Global config (`~/.bight.yml`)
 
 Settings in `~/.bight.yml` apply across all repos and are overridden field-by-field by the repo's `.bight.yml`. Only `defaults` fields are supported globally — `env_files` and `vars` must be defined in the repo config. If a repo has no `.bight.yml`, `bight` does nothing — the global config alone is not enough to trigger patching.
