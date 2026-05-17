@@ -27,6 +27,8 @@ type checkDeps struct {
 	gitOK            bool
 	hookErr          error
 	existingEnvFiles map[string]bool
+	cfgPath          string
+	cfgSource        configSource
 }
 
 func runChecks(cfg *config.Config, cfgErr error, deps checkDeps) []result {
@@ -41,9 +43,13 @@ func runChecks(cfg *config.Config, cfgErr error, deps checkDeps) []result {
 
 	// Check 2: config loadable
 	if cfgErr != nil {
-		results = append(results, fail(fmt.Sprintf("config: failed to load .bight.yml — %s", cfgErr)))
+		results = append(results, fail(fmt.Sprintf("config: failed to load%s — %s", configOriginSuffix(deps.cfgPath, deps.cfgSource), cfgErr)))
 	} else {
-		results = append(results, ok("config: .bight.yml loaded"))
+		display := deps.cfgPath
+		if display == "" {
+			display = ".bight.yml"
+		}
+		results = append(results, ok(fmt.Sprintf("config: %s loaded%s", display, configSourceSuffix(deps.cfgSource))))
 	}
 
 	// Check 3: config valid (only if loadable)
@@ -137,7 +143,7 @@ func doctorCmd() *cobra.Command {
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			_, gitErr := hook.HooksDir()
-			cfg, cfgErr := loadConfig()
+			cfg, cfgPath, cfgSource, cfgErr := loadConfig()
 
 			existing := map[string]bool{}
 			if cfg != nil {
@@ -150,6 +156,8 @@ func doctorCmd() *cobra.Command {
 				gitOK:            gitErr == nil,
 				hookErr:          hook.Check(),
 				existingEnvFiles: existing,
+				cfgPath:          cfgPath,
+				cfgSource:        cfgSource,
 			})
 
 			fmt.Println("bight doctor:")

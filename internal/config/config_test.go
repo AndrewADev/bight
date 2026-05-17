@@ -111,7 +111,7 @@ env_files:
 `)
 	withHome(t, home, repo)
 
-	cfg, err := Load()
+	cfg, _, err := Load()
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
@@ -132,7 +132,7 @@ defaults:
 `)
 	withHome(t, home, repo)
 
-	cfg, err := Load()
+	cfg, _, err := Load()
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
@@ -146,7 +146,7 @@ func TestLoadNeither(t *testing.T) {
 	repo := t.TempDir()
 	withHome(t, home, repo)
 
-	_, err := Load()
+	_, _, err := Load()
 	if err == nil {
 		t.Fatal("expected error when no config files exist")
 	}
@@ -158,7 +158,7 @@ func TestLoadGlobalMissingIsSilent(t *testing.T) {
 	writeYAML(t, repo, ".bight.yml", `project: myapp`)
 	withHome(t, home, repo)
 
-	cfg, err := Load()
+	cfg, _, err := Load()
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
@@ -180,7 +180,7 @@ defaults:
 `)
 	withHome(t, home, repo)
 
-	cfg, err := Load()
+	cfg, _, err := Load()
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
@@ -199,7 +199,7 @@ defaults:
 	writeYAML(t, repo, ".bight.yml", `project: myapp`)
 	withHome(t, home, repo)
 
-	cfg, err := Load()
+	cfg, _, err := Load()
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
@@ -227,7 +227,7 @@ env_files:
 `)
 	withHome(t, home, repo)
 
-	cfg, err := LoadFrom(custom)
+	cfg, _, err := LoadFrom(custom)
 	if err != nil {
 		t.Fatalf("LoadFrom: %v", err)
 	}
@@ -240,7 +240,7 @@ env_files:
 }
 
 func TestLoadFromMissingFile(t *testing.T) {
-	_, err := LoadFrom("/nonexistent/custom.bight.yml")
+	_, _, err := LoadFrom("/nonexistent/custom.bight.yml")
 	if err == nil {
 		t.Error("expected error for missing file")
 	}
@@ -256,7 +256,7 @@ defaults:
 	custom := writeYAML(t, repo, "custom.bight.yml", `project: myapp`)
 	withHome(t, home, repo)
 
-	cfg, err := LoadFrom(custom)
+	cfg, _, err := LoadFrom(custom)
 	if err != nil {
 		t.Fatalf("LoadFrom: %v", err)
 	}
@@ -292,7 +292,7 @@ env_files:
 	origStderr := os.Stderr
 	os.Stderr = w
 
-	cfg, loadErr := Load()
+	cfg, _, loadErr := Load()
 
 	w.Close()
 	os.Stderr = origStderr
