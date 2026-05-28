@@ -1,4 +1,18 @@
 # Changelog
+## v0.2.0 - 2026-05-28
+
+### Bug Fixes
+
+- Skip files with no updates
+
+### Features
+
+- Specify config path via env var
+
+### Miscellaneous
+
+- Add on-demand preview builds
+
 ## v0.1.0 - 2026-04-30
 
 ### Bug Fixes
