@@ -1,4 +1,10 @@
 # Changelog
+## v0.3.0 - 2026-06-06
+
+### Features
+
+- Add copy functionality (e.g. seeding/bootstrapping `.env` files)
+
 ## v0.2.0 - 2026-05-28
 
 ### Bug Fixes
