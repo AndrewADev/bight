@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
 	"os"
@@ -35,12 +34,7 @@ func promptInitConfig() error {
 		return err
 	}
 
-	reader := bufio.NewReader(os.Stdin)
-
-	fmt.Print("bight: no config file found. Create .bight.yml? [Y/n] ")
-	answer, _ := reader.ReadString('\n')
-	answer = strings.TrimSpace(answer)
-	if answer != "" && answer != "y" && answer != "Y" {
+	if !confirm("bight: no config file found. Create .bight.yml?", true) {
 		return nil
 	}
 
@@ -51,26 +45,24 @@ func promptInitConfig() error {
 	defaultProject := filepath.Base(cwd)
 
 	fmt.Printf("  Project name [%s]: ", defaultProject)
-	project, _ := reader.ReadString('\n')
+	project, _ := promptReader.ReadString('\n')
 	project = strings.TrimSpace(project)
 	if project == "" {
 		project = defaultProject
 	}
 
 	fmt.Print("  Env file path [.env]: ")
-	envFile, _ := reader.ReadString('\n')
+	envFile, _ := promptReader.ReadString('\n')
 	envFile = strings.TrimSpace(envFile)
 	if envFile == "" {
 		envFile = ".env"
 	}
 
 	var copySource string
-	fmt.Print("  Seed this file from another path on first worktree init? [y/N] ")
-	seedAnswer, _ := reader.ReadString('\n')
-	if v := strings.TrimSpace(seedAnswer); v == "y" || v == "Y" {
+	if confirm("  Seed this file from another path on first worktree init?", false) {
 		defaultSource := envFile
 		fmt.Printf("  Source path [%s]: ", defaultSource)
-		src, _ := reader.ReadString('\n')
+		src, _ := promptReader.ReadString('\n')
 		copySource = strings.TrimSpace(src)
 		if copySource == "" {
 			copySource = defaultSource
@@ -78,13 +70,11 @@ func promptInitConfig() error {
 	}
 
 	var vars []config.Var
-	fmt.Print("  Add env vars to track? [Y/n] ")
-	addVars, _ := reader.ReadString('\n')
-	if v := strings.TrimSpace(addVars); v == "" || v == "y" || v == "Y" {
+	if confirm("  Add env vars to track?", true) {
 		fmt.Println("  (blank name to finish)")
 		for {
 			fmt.Print("    Var name: ")
-			name, _ := reader.ReadString('\n')
+			name, _ := promptReader.ReadString('\n')
 			name = strings.TrimSpace(name)
 			if name == "" {
 				break
@@ -93,7 +83,7 @@ func promptInitConfig() error {
 			fmt.Println("      1) template  - interpolate branch/project name (default)")
 			fmt.Println("      2) random    - fresh random value on each checkout")
 			fmt.Print("    Choice [1]: ")
-			choice, _ := reader.ReadString('\n')
+			choice, _ := promptReader.ReadString('\n')
 			strategy := "template"
 			if strings.TrimSpace(choice) == "2" {
 				strategy = "random"
