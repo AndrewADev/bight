@@ -34,6 +34,11 @@ func promptInitConfig() error {
 		return err
 	}
 
+	if !isPromptTTY() {
+		fmt.Fprintln(os.Stderr, output.WarnStderr("bight: no config file found and stdin is not a TTY; skipping interactive setup. Create .bight.yml manually or re-run from a terminal."))
+		return nil
+	}
+
 	if !confirm("bight: no config file found. Create .bight.yml?", true) {
 		return nil
 	}
