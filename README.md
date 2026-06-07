@@ -122,6 +122,10 @@ git checkout -b feat-login
 
 ## Reference
 
+### Commands
+
+Full per-command reference (flags, usage, subcommand tree) is auto-generated from the CLI itself and lives in [docs/commands/bight.md](docs/commands/bight.md). You can also run `bight help <command>` locally.
+
 ### Config file
 
 `bight install` generates a starter config, but you can hand-edit `.bight.yml` at any time:

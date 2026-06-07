@@ -35,6 +35,11 @@ tasks:
       - git push
       - git push --tags
   
+  docs:
+    desc: Regenerate per-command Markdown reference under docs/commands/
+    cmds:
+      - go generate ./...
+
   # Help and info
   default:
     desc: Show available tasks

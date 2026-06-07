@@ -30,6 +30,16 @@ Commit messages follow [Angular commit conventions](https://github.com/angular/a
 conform enforce --commit-msg-file .git/COMMIT_EDITMSG
 ```
 
+## Command docs
+
+Per-command reference under `docs/commands/` is generated from the cobra command tree. Regenerate after changing the public-facing interface:
+
+```bash
+task docs   # or: go generate ./...
+```
+
+The generator lives at `tools/docgen/main.go`.
+
 ## Releasing
 
 Releases are triggered by pushing a semver tag. The CI workflow builds 5-platform binaries, generates a changelog via `git-cliff`, and publishes a GitHub release.

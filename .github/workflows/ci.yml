@@ -27,6 +27,16 @@ jobs:
       - name: Build
         run: go build ./...
 
+      - name: Command docs up-to-date
+        run: |
+          go generate ./...
+          if [ -n "$(git status --porcelain -- docs/commands)" ]; then
+            echo "::error::Command docs in docs/commands/ are out of date. Run 'go generate ./...' and commit the result."
+            git status --short -- docs/commands
+            git diff -- docs/commands
+            exit 1
+          fi
+
   commits:
     name: Commit messages
     runs-on: ubuntu-latest
