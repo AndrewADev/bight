@@ -54,7 +54,7 @@ Once the run completes, anyone with read access can download the artifact for th
 
 ## Releasing
 
-Releases are triggered by pushing a semver tag. The CI workflow builds 5-platform binaries, generates a changelog via `git-cliff`, and publishes a GitHub release.
+Releases are triggered by pushing a semver tag. The CI workflow builds 5-platform binaries and publishes a GitHub release. The release notes are the matching version section extracted from `CHANGELOG.md` (the single source of truth), so the changelog must be committed before tagging.
 
 Prerequisites: [`git-cliff`](https://git-cliff.org/docs/installation).
 
