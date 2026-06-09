@@ -40,6 +40,18 @@ task docs   # or: go generate ./...
 
 The generator lives at `tools/docgen/main.go`.
 
+## Preview builds
+
+The `Preview` workflow builds per-platform binaries for an open PR and uploads them as artifacts, so reviewers can try the changes without a Go toolchain. It can be dispatched from Actions → Preview → Run workflow, or via the helper task:
+
+```bash
+task preview-build -- 42   # dispatch the Preview workflow for PR #42
+```
+
+Requires `gh` CLI authenticated with write access to the repo.
+
+Once the run completes, anyone with read access can download the artifact for their platform with `task preview-fetch -- 42` (see the README).
+
 ## Releasing
 
 Releases are triggered by pushing a semver tag. The CI workflow builds 5-platform binaries, generates a changelog via `git-cliff`, and publishes a GitHub release.

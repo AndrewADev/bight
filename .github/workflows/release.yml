@@ -102,20 +102,6 @@ jobs:
             --title "$TAG" \
             --notes-file release-notes.md
 
-      - name: Publish rolling latest
-        if: github.ref == 'refs/heads/main'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REPO: ${{ github.repository }}
-        run: |
-          gh release delete latest --repo "$REPO" --yes 2>/dev/null || true
-          gh release create latest dist/* \
-            --repo "$REPO" \
-            --title "${{ github.sha }}" \
-            --notes "Latest build from \`main\`. Not for production use." \
-            --prerelease \
-            --target "${{ github.sha }}"
-
   update-tap:
     name: Update Homebrew tap
     needs: release

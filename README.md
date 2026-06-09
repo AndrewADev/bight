@@ -51,13 +51,15 @@ sha256sum -c checksums.txt --ignore-missing
 
 **Trying a PR preview:**
 
-For any pushed commit (including from a fork), you can install directly from source:
+Once a maintainer has triggered the `Preview` workflow on a PR (see [DEVELOPING.md](DEVELOPING.md#preview-builds)), per-platform binaries plus a `checksums.txt` are attached to the run as artifacts, downloadable by anyone with read access. Preview binaries report a version like `v0.0.0-preview-pr<N>-<sha>` so they can't be mistaken for a release.
+
+If you have the [Task](https://taskfile.dev/) runner and `gh` CLI installed, you can grab the right one for your platform with:
 
 ```sh
-go install github.com/AndrewADev/bight@<commit-sha-or-branch>
+task preview-fetch -- 42   # downloads the artifact for your OS/arch into dist/preview-pr42/
 ```
 
-For users without a Go toolchain, a maintainer can run the `Preview` workflow on the PR (Actions → Preview → Run workflow → enter PR number). Binaries for each platform — plus a `checksums.txt` — are then attached to the run as artifacts, downloadable from the run page by anyone with read access to the repo. Preview binaries report a version like `v0.0.0-preview-pr<N>-<sha>` so they can't be mistaken for a release.
+It prints the `install` command you can run to drop the binary onto your `PATH`.
 
 ## Getting started
 

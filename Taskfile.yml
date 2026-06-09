@@ -40,6 +40,75 @@ tasks:
     cmds:
       - go generate ./...
 
+  preview-build:
+    desc: "Trigger the preview workflow build for a PR (usage: task preview-build -- 42)"
+    requires:
+      vars: [CLI_ARGS]
+    vars:
+      PR: '{{.CLI_ARGS}}'
+    silent: true
+    preconditions:
+      - sh: command -v gh >/dev/null 2>&1
+        msg: "gh CLI not found; install from https://cli.github.com/"
+      - sh: gh auth status >/dev/null 2>&1
+        msg: "gh CLI is not authenticated; run 'gh auth login'"
+      - sh: '[ "$(gh api "repos/$(gh repo view --json nameWithOwner -q .nameWithOwner)" --jq .permissions.push)" = "true" ]'
+        msg: "you don't have write access to this repo, which is required to dispatch workflows"
+    cmds:
+      - |
+        set -euo pipefail
+        echo "Dispatching preview workflow for PR {{.PR}}..."
+        gh workflow run preview.yml -f pr={{.PR}}
+        echo ""
+        echo "Watch progress with:  gh run list --workflow=preview.yml --limit 5"
+        echo "Then fetch the binary: task preview-fetch -- {{.PR}}"
+
+  preview-fetch:
+    desc: "Download the preview binary for the current system from a PR (usage: task preview-fetch -- 42)"
+    requires:
+      vars: [CLI_ARGS]
+    vars:
+      PR: '{{.CLI_ARGS}}'
+    silent: true
+    preconditions:
+      - sh: command -v gh >/dev/null 2>&1
+        msg: "gh CLI not found; install from https://cli.github.com/"
+      - sh: gh auth status >/dev/null 2>&1
+        msg: "gh CLI is not authenticated; run 'gh auth login'"
+      - sh: command -v go >/dev/null 2>&1
+        msg: "go not found; install from https://go.dev/dl/"
+    cmds:
+      - |
+        set -euo pipefail
+        goos=$(go env GOOS)
+        goarch=$(go env GOARCH)
+        ext=""
+        [ "$goos" = "windows" ] && ext=".exe"
+        artifact="bight-preview-pr{{.PR}}-${goos}-${goarch}"
+        repo=$(gh repo view --json nameWithOwner -q .nameWithOwner)
+        echo "Looking up latest preview artifact: ${artifact}"
+        run_id=$(gh api "repos/${repo}/actions/artifacts?per_page=100" \
+          --jq "[.artifacts[] | select(.name == \"${artifact}\" and .expired == false)] | sort_by(.created_at) | reverse | first | .workflow_run.id")
+        if [ -z "$run_id" ] || [ "$run_id" = "null" ]; then
+          echo "No active preview artifact found for PR {{.PR}} (${goos}/${goarch})." >&2
+          echo "Trigger one with: gh workflow run preview.yml -f pr={{.PR}}" >&2
+          exit 1
+        fi
+        dest="dist/preview-pr{{.PR}}"
+        mkdir -p "$dest"
+        gh run download "$run_id" -n "$artifact" -D "$dest"
+        bin="${dest}/bight-${goos}-${goarch}${ext}"
+        chmod +x "$bin"
+        echo ""
+        echo "Downloaded: $bin (run ${run_id})"
+        echo ""
+        echo "To install, run:"
+        if [ "$goos" = "windows" ]; then
+          echo "  move \"$(pwd)/$bin\" \"%USERPROFILE%\\bin\\bight.exe\""
+        else
+          echo "  install -m 0755 \"$(pwd)/$bin\" \"\$HOME/.local/bin/bight\""
+        fi
+
   # Help and info
   default:
     desc: Show available tasks
