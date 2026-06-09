@@ -1,4 +1,23 @@
 # Changelog
+## v0.3.1 - 2026-06-09
+
+### Bug Fixes
+
+- Skip interactive config init when non-interactive
+
+### Documentation
+
+- Add usage for all commands
+
+### Miscellaneous
+
+- Streamline preview builds
+- Prevent divergences from changelog
+
+### Refactor
+
+- Shared confirm prompt
+
 ## v0.3.0 - 2026-06-06
 
 ### Features
