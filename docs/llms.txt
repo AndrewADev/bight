@@ -1,0 +1,22 @@
+# bight
+
+> A Go CLI that patches `.env` files on `git checkout`, keeping local environment variables in sync with the current branch. It installs a git `post-checkout` hook and rewrites only the vars listed in `.bight.yml`; every other line in the `.env` file is left untouched.
+
+Install with `brew install andrewadev/tap/bight` or `go install github.com/AndrewADev/bight@latest`, then run `bight install` once per repository. Each tracked var uses one of three strategies: `template` (interpolates project and branch name), `random` (fresh value on every checkout), or `deterministic` (stable hash of project + branch, identical across machines). Per env file, `backup: true` writes a `.bak` copy before patching and `copy:` seeds a missing file from another path, which is how new `git worktree` checkouts get a starting `.env`. Vars marked `sensitive` are masked in console output. `defaults.collect-comments` re-appends comments that `godotenv` would otherwise drop on rewrite. A global `~/.bight.yml` supplies `defaults` shared across repos; per-repo `.bight.yml` overrides it field by field. The config path can be set with `--config` or `BIGHT_CONFIG`.
+
+## Docs
+
+- [Overview and getting started](https://andrewadev.github.io/bight/index.md): installation, first-run walkthrough, `.bight.yml` format, strategies, sensitive vars, backups, comment preservation, seeding env files with `copy`, global config, non-default config paths
+- [bight](https://andrewadev.github.io/bight/commands/bight.md): root command and the global `--config` flag
+- [bight install](https://andrewadev.github.io/bight/commands/bight_install.md): write the post-checkout hook and scaffold `.bight.yml`
+- [bight doctor](https://andrewadev.github.io/bight/commands/bight_doctor.md): validate hook, config, env files, strategies and triggers
+- [bight run](https://andrewadev.github.io/bight/commands/bight_run.md): apply env patching for the current branch, with `--dry-run`
+- [bight post-checkout](https://andrewadev.github.io/bight/commands/bight_post-checkout.md): entry point invoked by git's post-checkout hook
+- [bight uninstall](https://andrewadev.github.io/bight/commands/bight_uninstall.md): remove the post-checkout hook
+
+## Optional
+
+- [Full documentation in one file](https://andrewadev.github.io/bight/llms-full.txt): the overview and every command page concatenated
+- [Changelog](https://andrewadev.github.io/bight/CHANGELOG.md): release history
+- [Developing](https://andrewadev.github.io/bight/DEVELOPING.md): contributor setup, commit conventions, release process
+- [Source repository](https://github.com/AndrewADev/bight): code, issues, releases

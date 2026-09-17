@@ -40,6 +40,14 @@ tasks:
     cmds:
       - go generate ./...
 
+  site:
+    desc: Build the GitHub Pages site into dist/site (requires pandoc)
+    preconditions:
+      - sh: command -v pandoc >/dev/null 2>&1
+        msg: "pandoc not found; install from https://pandoc.org/installing.html"
+    cmds:
+      - tools/build-site.sh dist/site
+
   preview-build:
     desc: "Trigger the preview workflow build for a PR (usage: task preview-build -- 42)"
     requires:
