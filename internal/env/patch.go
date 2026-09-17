@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"maps"
 	"os"
 	"path/filepath"
 	"strings"
@@ -102,9 +103,7 @@ func PatchAll(path string, patches map[string]string, comments []string) error {
 		existing = make(map[string]string)
 	}
 
-	for k, v := range patches {
-		existing[k] = v
-	}
+	maps.Copy(existing, patches)
 
 	content, err := godotenv.Marshal(existing)
 	if err != nil {
