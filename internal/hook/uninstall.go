@@ -29,16 +29,7 @@ func uninstall(hookPath string) error {
 		return fmt.Errorf("reading hook: %w", err)
 	}
 
-	lines := strings.Split(string(data), "\n")
-	filtered := make([]string, 0, len(lines))
-	found := false
-	for _, line := range lines {
-		if strings.Contains(line, " post-checkout ") {
-			found = true
-			continue
-		}
-		filtered = append(filtered, line)
-	}
+	filtered, found := stripHookBlock(strings.Split(string(data), "\n"))
 	if !found {
 		return ErrNotInstalled
 	}
@@ -57,4 +48,30 @@ func uninstall(hookPath string) error {
 	}
 
 	return os.WriteFile(hookPath, []byte(strings.Join(filtered, "\n")), info.Mode())
+}
+
+// stripHookBlock removes bight's lines from a hook script: the marker-delimited
+// block written by current installs, or the single invocation line written by
+// installs before the markers existed. The second return value reports whether
+// anything was removed.
+func stripHookBlock(lines []string) ([]string, bool) {
+	filtered := make([]string, 0, len(lines))
+	found := false
+	inBlock := false
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		switch {
+		case trimmed == blockBegin:
+			inBlock = true
+			found = true
+		case trimmed == blockEnd:
+			inBlock = false
+		case inBlock:
+		case strings.Contains(line, " post-checkout "):
+			found = true
+		default:
+			filtered = append(filtered, line)
+		}
+	}
+	return filtered, found
 }
