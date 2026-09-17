@@ -40,6 +40,16 @@ task docs   # or: go generate ./...
 
 The generator lives at `tools/docgen/main.go`.
 
+## Docs site
+
+The `Pages` workflow publishes https://andrewadev.github.io/bight/ on every push to `main` that touches the README, changelog, `docs/`, or the build script. The site is assembled by `tools/build-site.sh`: the README becomes `index.md`, `docs/commands/` is copied as-is, and `llms-full.txt` is concatenated from the same sources. Every `.md` page also gets a rendered `.html` sibling (via pandoc and `tools/site-links.lua`, which points relative `.md` links at the `.html` versions), so browsers get HTML while `llms.txt` links to the Markdown. `docs/llms.txt` is hand-maintained; update it when pages are added or renamed.
+
+Build locally (requires [pandoc](https://pandoc.org/installing.html)):
+
+```bash
+task site   # writes dist/site/
+```
+
 ## Preview builds
 
 The `Preview` workflow builds per-platform binaries for an open PR and uploads them as artifacts, so reviewers can try the changes without a Go toolchain. It can be dispatched from Actions → Preview → Run workflow, or via the helper task:
