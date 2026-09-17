@@ -1,6 +1,7 @@
 package hook
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -97,5 +98,38 @@ func TestUninstallPreservesPermissions(t *testing.T) {
 	}
 	if got := info.Mode().Perm(); got != 0750 {
 		t.Errorf("permissions = %o, want %o", got, 0750)
+	}
+}
+
+func TestUninstallBlockOnly(t *testing.T) {
+	dir := makeHooksDir(t)
+	writeHook(t, hookFile(dir), fmt.Sprintf(hookScript, "/usr/local/bin/bight"))
+
+	if err := uninstall(hookFile(dir)); err != nil {
+		t.Fatalf("uninstall() error: %v", err)
+	}
+	if _, err := os.Stat(hookFile(dir)); !os.IsNotExist(err) {
+		t.Error("expected hook file to be removed")
+	}
+}
+
+func TestUninstallSharedHookWithBlock(t *testing.T) {
+	dir := makeHooksDir(t)
+	writeHook(t, hookFile(dir), fmt.Sprintf(hookScript, "/usr/local/bin/bight")+"/some/other/tool run \"$@\"\n")
+
+	if err := uninstall(hookFile(dir)); err != nil {
+		t.Fatalf("uninstall() error: %v", err)
+	}
+
+	data, err := os.ReadFile(hookFile(dir))
+	if err != nil {
+		t.Fatalf("reading hook after uninstall: %v", err)
+	}
+	content := string(data)
+	if strings.Contains(content, "bight") {
+		t.Errorf("bight block still present after uninstall:\n%s", content)
+	}
+	if !strings.Contains(content, "/some/other/tool") {
+		t.Error("other hook content was removed")
 	}
 }

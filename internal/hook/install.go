@@ -7,7 +7,28 @@ import (
 	"strings"
 )
 
-const hookScript = "#!/bin/sh\n%s post-checkout \"$@\"\n"
+const (
+	blockBegin = "# bight:begin"
+	blockEnd   = "# bight:end"
+)
+
+// hookScript checks the binary recorded at install before running it; a
+// missing or non-executable binary prints a hint and exits cleanly instead
+// of failing the hook.
+const hookScript = `#!/bin/sh
+` + blockBegin + `
+BIGHT="%s"
+if [ ! -e "$BIGHT" ]; then
+  echo "bight: $BIGHT not found; run 'bight install' again" >&2
+  exit 0
+fi
+if [ ! -x "$BIGHT" ]; then
+  echo "bight: $BIGHT is not executable" >&2
+  exit 0
+fi
+"$BIGHT" post-checkout "$@"
+` + blockEnd + `
+`
 
 // HooksDir returns the path to the git hooks directory for the repo at the
 // current working directory. In a regular repo this is .git/hooks; in a
