@@ -10,13 +10,14 @@ import (
 const (
 	blockBegin = "# bight:begin"
 	blockEnd   = "# bight:end"
+	shebang    = "#!/bin/sh"
 )
 
-// hookScript checks the binary recorded at install before running it; a
-// missing or non-executable binary prints a hint and exits cleanly instead
-// of failing the hook.
-const hookScript = `#!/bin/sh
-` + blockBegin + `
+// hookBlock is the marker-delimited section bight owns inside the hook. It
+// checks the binary recorded at install before running it; a missing or
+// non-executable binary prints a hint and exits cleanly instead of failing
+// the hook.
+const hookBlock = blockBegin + `
 BIGHT="%s"
 if [ ! -e "$BIGHT" ]; then
   echo "bight: $BIGHT not found; run 'bight install' again" >&2
@@ -29,6 +30,9 @@ fi
 "$BIGHT" post-checkout "$@"
 ` + blockEnd + `
 `
+
+// hookScript is the complete hook written when no post-checkout hook exists.
+const hookScript = shebang + "\n" + hookBlock
 
 // HooksDir returns the path to the git hooks directory for the repo at the
 // current working directory. In a regular repo this is .git/hooks; in a
@@ -117,12 +121,48 @@ func Install() error {
 		return fmt.Errorf("%s not found — are you in a git repo?", hooksDir)
 	}
 
-	hookPath := filepath.Join(hooksDir, "post-checkout")
-	content := fmt.Sprintf(hookScript, exe)
-	if err := os.WriteFile(hookPath, []byte(content), 0755); err != nil {
-		return fmt.Errorf("writing hook: %w", err)
+	return install(filepath.Join(hooksDir, "post-checkout"), exe)
+}
+
+// install writes bight's block into the hook at hookPath. A missing hook is
+// created from hookScript. An existing hook keeps its shebang, other content
+// and file mode; any prior bight block or legacy invocation line is removed
+// before the block is appended.
+func install(hookPath, exe string) error {
+	info, err := os.Stat(hookPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			content := fmt.Sprintf(hookScript, exe)
+			if err := os.WriteFile(hookPath, []byte(content), 0755); err != nil {
+				return fmt.Errorf("writing hook: %w", err)
+			}
+			return nil
+		}
+		return fmt.Errorf("reading hook: %w", err)
 	}
 
+	data, err := os.ReadFile(hookPath)
+	if err != nil {
+		return fmt.Errorf("reading hook: %w", err)
+	}
+
+	filtered, _ := stripHookBlock(strings.Split(string(data), "\n"))
+	existing := strings.TrimRight(strings.Join(filtered, "\n"), "\n")
+
+	var b strings.Builder
+	if !strings.HasPrefix(existing, "#!") {
+		b.WriteString(shebang)
+		b.WriteString("\n")
+	}
+	if existing != "" {
+		b.WriteString(existing)
+		b.WriteString("\n")
+	}
+	fmt.Fprintf(&b, hookBlock, exe)
+
+	if err := os.WriteFile(hookPath, []byte(b.String()), info.Mode()); err != nil {
+		return fmt.Errorf("writing hook: %w", err)
+	}
 	return nil
 }
 
