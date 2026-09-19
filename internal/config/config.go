@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/AndrewADev/bight/internal/output"
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v3"
 )
 
 var userHomeDir = os.UserHomeDir
