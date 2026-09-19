@@ -1,4 +1,23 @@
 # Changelog
+## v0.3.2 - 2026-09-19
+
+### Bug Fixes
+
+- Handle missing binary in hook
+- Switch to maintained yaml package
+
+### Documentation
+
+- Add GH Pages site w/ llms.txt
+
+### Miscellaneous
+
+- Upgrade to go 1.26
+
+### Refactor
+
+- Apply go fix modernizers
+
 ## v0.3.1 - 2026-06-09
 
 ### Bug Fixes
