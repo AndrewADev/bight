@@ -7,6 +7,8 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/joho/godotenv"
@@ -213,7 +215,7 @@ func PatchAll(path string, patches map[string]string, comments []CommentBlock) e
 
 	maps.Copy(existing, patches)
 
-	content, err := godotenv.Marshal(existing)
+	content, err := marshal(existing)
 	if err != nil {
 		return err
 	}
@@ -253,3 +255,70 @@ func PatchAll(path string, patches map[string]string, comments []CommentBlock) e
 	committed = true
 	return nil
 }
+
+// marshal renders env as sorted KEY=value lines, encoding each value with
+// quote. It returns an error for a value godotenv cannot read back unchanged.
+func marshal(env map[string]string) (string, error) {
+	lines := make([]string, 0, len(env))
+	for _, key := range slices.Sorted(maps.Keys(env)) {
+		quoted, ok := quote(env[key])
+		if !ok {
+			return "", fmt.Errorf("value of %s cannot be written in a form godotenv reads back unchanged", key)
+		}
+		lines = append(lines, key+"="+quoted)
+	}
+	return strings.Join(lines, "\n"), nil
+}
+
+// quote returns the first of these encodings of value that godotenv.Unmarshal
+// reads back unchanged:
+//
+//  1. a bare integer
+//  2. double quotes, for values without $
+//  3. single quotes, for values without a line break
+//  4. double quotes with $ escaped
+//  5. unquoted with $ escaped
+//
+// Every encoding fits on one line, as mergeComments matches keys line by line.
+//
+// godotenv's closing-quote scan skips any quote preceded by \, so no quoted
+// form holds a value ending in \. It also drops an escaped " at the end of a
+// double-quoted value and leaves its backslash:
+// https://github.com/joho/godotenv/issues/226
+func quote(value string) (string, bool) {
+	var candidates []string
+	if _, err := strconv.Atoi(value); err == nil {
+		candidates = append(candidates, value)
+	}
+	doubleQuoted := `"` + doubleQuoteEscaper.Replace(value) + `"`
+	singleQuoted := "'" + value + "'"
+	if !strings.Contains(value, "$") {
+		candidates = append(candidates, doubleQuoted)
+	}
+	if !strings.ContainsAny(value, "\n\r") {
+		candidates = append(candidates, singleQuoted)
+	}
+	candidates = append(candidates, doubleQuoted, strings.ReplaceAll(value, "$", `\$`))
+
+	for _, candidate := range candidates {
+		if readsBack(candidate, value) {
+			return candidate, true
+		}
+	}
+	return "", false
+}
+
+// readsBack reports whether godotenv parses the assignment K=encoded as a
+// single variable with the given value.
+func readsBack(encoded, value string) bool {
+	env, err := godotenv.Unmarshal("K=" + encoded)
+	return err == nil && len(env) == 1 && env["K"] == value
+}
+
+var doubleQuoteEscaper = strings.NewReplacer(
+	`\`, `\\`,
+	`"`, `\"`,
+	"\n", `\n`,
+	"\r", `\r`,
+	"$", `\$`,
+)

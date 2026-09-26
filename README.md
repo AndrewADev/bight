@@ -250,6 +250,25 @@ defaults:
   collect-comments: blocks-only
 ```
 
+### How values are written
+
+Patching rewrites the whole env file: keys are sorted, and every value, patched or not, is re-encoded. Each value is written in the first of these forms that `godotenv` reads back unchanged:
+
+| # | Form | Chosen for | Example |
+|---|---|---|---|
+| 1 | Bare integer | Integers | `PORT=8080` |
+| 2 | Double quotes | Most values: no `$`, not ending in `"` or `\` | `PASSWORD="abc999!"` |
+| 3 | Single quotes | Values with `$` or ending in `"`, on one line, with no `'`, not ending in `\` | `PRICE='$5'` |
+| 4 | Double quotes, `$` escaped | Values with `$` and a `'` or line break | `NOTE="it's \$5"` |
+| 5 | Unquoted, `$` escaped | Values ending in `\`, or ending in `"` and containing `'` | `DIR=C:\My Dir\` |
+
+The order follows these rules:
+
+- **`$` stays unescaped where possible.** Inside double quotes, `$` starts a variable reference, so a literal `$` has to be written as `\$`. Inside single quotes, `$` is literal and needs no escape. Values containing `$` are therefore single-quoted when they can be. `godotenv` reads `\$` back as `$`, but some other `.env` readers keep the backslash.
+- **Every value is written on one line.** Line breaks and carriage returns are written as `\n` and `\r` inside double quotes, never raw.
+
+A few values fit none of the forms, such as a value with a line break that ends in `"` or `\`. For these, patching fails with an error and leaves the file unchanged.
+
 ### Triggers (`on`)
 
 | Value | When |
