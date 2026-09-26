@@ -3,6 +3,7 @@ package env
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -63,6 +64,13 @@ func writeTempEnv(t *testing.T, content string) string {
 	return f.Name()
 }
 
+func assertBlocks(t *testing.T, got, want []CommentBlock) {
+	t.Helper()
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got %#v\nwant %#v", got, want)
+	}
+}
+
 func TestScanComments_All(t *testing.T) {
 	path := writeTempEnv(t, "# comment one\nDB_NAME=foo\n# comment two\n")
 
@@ -70,15 +78,10 @@ func TestScanComments_All(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ScanComments: %v", err)
 	}
-	want := []string{"# comment one", "# comment two"}
-	if len(got) != len(want) {
-		t.Fatalf("got %v, want %v", got, want)
-	}
-	for i := range want {
-		if got[i] != want[i] {
-			t.Errorf("[%d] got %q, want %q", i, got[i], want[i])
-		}
-	}
+	assertBlocks(t, got, []CommentBlock{
+		{Lines: []string{"# comment one"}, Anchor: "DB_NAME"},
+		{Lines: []string{"# comment two"}, Anchor: "DB_NAME", After: true},
+	})
 }
 
 func TestScanComments_BlocksOnly(t *testing.T) {
@@ -88,15 +91,35 @@ func TestScanComments_BlocksOnly(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ScanComments: %v", err)
 	}
-	want := []string{"# block line 1", "# block line 2"}
-	if len(got) != len(want) {
-		t.Fatalf("got %v, want %v", got, want)
+	assertBlocks(t, got, []CommentBlock{
+		{Lines: []string{"# block line 1", "# block line 2"}, Anchor: "DB_NAME", After: true},
+	})
+}
+
+func TestScanComments_Header(t *testing.T) {
+	path := writeTempEnv(t, "# header\n\n# about A\nA=1\n")
+
+	got, err := ScanComments(path, "all")
+	if err != nil {
+		t.Fatalf("ScanComments: %v", err)
 	}
-	for i := range want {
-		if got[i] != want[i] {
-			t.Errorf("[%d] got %q, want %q", i, got[i], want[i])
-		}
+	assertBlocks(t, got, []CommentBlock{
+		{Lines: []string{"# header"}, Header: true},
+		{Lines: []string{"# about A"}, Anchor: "A"},
+	})
+}
+
+func TestScanComments_AnchorSyntax(t *testing.T) {
+	path := writeTempEnv(t, "# a\nexport A=1\n# b\nB: 2\n")
+
+	got, err := ScanComments(path, "all")
+	if err != nil {
+		t.Fatalf("ScanComments: %v", err)
 	}
+	assertBlocks(t, got, []CommentBlock{
+		{Lines: []string{"# a"}, Anchor: "A"},
+		{Lines: []string{"# b"}, Anchor: "B"},
+	})
 }
 
 func TestScanComments_None(t *testing.T) {
@@ -143,37 +166,92 @@ func TestPatchAll_MultiplePatches(t *testing.T) {
 	}
 }
 
-func TestPatchAll_WithComments(t *testing.T) {
-	path := writeTempEnv(t, "# header comment\n# second line\nDB_NAME=old\n")
-
-	comments, err := ScanComments(path, "all")
-	if err != nil {
-		t.Fatalf("ScanComments: %v", err)
+func TestPatchAll_CommentPlacement(t *testing.T) {
+	tests := []struct {
+		name  string
+		mode  string
+		input string
+		want  string
+	}{
+		{
+			name:  "anchored comment follows its key on sort",
+			mode:  "all",
+			input: "# z note\nZ=1\nA=2\n",
+			want:  "A=2\n# z note\nZ=1\n",
+		},
+		{
+			name:  "header stays at top",
+			mode:  "all",
+			input: "# header\n# more\n\nZ=1\nA=2\n",
+			want:  "# header\n# more\n\nA=2\nZ=1\n",
+		},
+		{
+			name:  "trailing comment follows preceding key on sort",
+			mode:  "all",
+			input: "DB_NAME=demo\n\nFIREBASE_VAL_1=some-val\n#FIREBASE_VAL_2=other-val\n\nA=2\n",
+			want:  "A=2\nDB_NAME=\"demo\"\nFIREBASE_VAL_1=\"some-val\"\n#FIREBASE_VAL_2=other-val\n",
+		},
+		{
+			name:  "block between two keys attaches to the key below",
+			mode:  "all",
+			input: "B=1\n# about C\nC=3\nA=2\n",
+			want:  "A=2\nB=1\n# about C\nC=3\n",
+		},
+		{
+			name:  "detached block goes to end",
+			mode:  "all",
+			input: "B=1\n\n# detached\n\nA=2\n",
+			want:  "A=2\nB=1\n\n# detached\n",
+		},
+		{
+			name:  "blocks-only drops single-line anchored comment",
+			mode:  "blocks-only",
+			input: "# single\nB=1\n# one\n# two\nA=2\n",
+			want:  "# one\n# two\nA=2\nB=1\n",
+		},
+		{
+			name:  "export and colon anchors resolve",
+			mode:  "all",
+			input: "# b\nexport B=1\n# a\nA: 2\n",
+			want:  "# a\nA=2\n# b\nB=1\n",
+		},
+		{
+			name:  "multiple blocks for one key keep order",
+			mode:  "all",
+			input: "# first\nA=1\n# second\nA=2\n",
+			want:  "# first\n# second\nA=2\n",
+		},
 	}
 
-	if err := PatchAll(path, map[string]string{"DB_NAME": "new"}, comments); err != nil {
-		t.Fatalf("PatchAll: %v", err)
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			path := writeTempEnv(t, tc.input)
+			comments, err := ScanComments(path, tc.mode)
+			if err != nil {
+				t.Fatalf("ScanComments: %v", err)
+			}
+			if err := PatchAll(path, map[string]string{"A": "2"}, comments); err != nil {
+				t.Fatalf("PatchAll: %v", err)
+			}
+			data, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(data) != tc.want {
+				t.Errorf("got:\n%s\nwant:\n%s", data, tc.want)
+			}
+		})
 	}
+}
 
-	data, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	content := string(data)
-
-	if !strings.Contains(content, "# header comment") {
-		t.Errorf("missing '# header comment' in:\n%s", content)
-	}
-	if !strings.Contains(content, "# second line") {
-		t.Errorf("missing '# second line' in:\n%s", content)
-	}
-	if !strings.Contains(content, "DB_NAME=") {
-		t.Errorf("missing 'DB_NAME=' in:\n%s", content)
-	}
-	keyIdx := strings.Index(content, "DB_NAME=")
-	commentIdx := strings.Index(content, "# header comment")
-	if commentIdx < keyIdx {
-		t.Errorf("comments appear before key=value content")
+func TestMergeComments_OrphanedAnchorGoesToEnd(t *testing.T) {
+	got := mergeComments("A=1", []CommentBlock{
+		{Lines: []string{"# gone"}, Anchor: "GONE"},
+		{Lines: []string{"# gone after"}, Anchor: "GONE_TOO", After: true},
+	})
+	want := "A=1\n\n# gone\n# gone after"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
 	}
 }
 

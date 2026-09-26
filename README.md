@@ -228,22 +228,27 @@ The backup is a verbatim copy of the file as it was immediately before patching.
 
 ### Preserving comments (`collect-comments`)
 
-Full comment preservation is not supported, as the package we use, `godotenv`, strips comments on rewrite. As a partial workaround, `defaults.collect-comments` re-appends comments collected before the patch was applied:
+`godotenv` strips comments and sorts keys on rewrite. `defaults.collect-comments` collects comments before the patch is applied and writes them back afterwards:
 
-> **Note:** This is a best-effort feature. Comments are collected from the file before patching and re-appended at the end afterwards — their original positions are not restored, and inline comments (`KEY=val # note`) are lost entirely.
+| Comment position before patching | Position after patching |
+|---|---|
+| Directly above a `KEY=…` line | Directly above that key, wherever it sorts to |
+| Directly below a `KEY=…` line, followed by a blank line or end of file | Directly below that key, wherever it sorts to |
+| Before the first key, followed by one or more blank lines | Top of the file |
+| Anywhere else | End of the file |
+
+> **Note:** This is a best-effort feature. Inline comments (`KEY=val # note`) are lost, and blank lines between keys are not preserved.
 
 | Value | Behavior |
 |---|---|
-| `all` | Re-appends every full-line comment |
-| `blocks-only` | Re-appends only contiguous comment blocks (≥ 2 lines) — skips isolated `# notes` |
+| `all` | Preserves every full-line comment |
+| `blocks-only` | Preserves only contiguous comment blocks (≥ 2 lines) — skips isolated `# notes` |
 | unset / `none` | Comments are not preserved (default) |
 
 ```yaml
 defaults:
   collect-comments: blocks-only
 ```
-
-Comments are always written after the key=value pairs.
 
 ### Triggers (`on`)
 
