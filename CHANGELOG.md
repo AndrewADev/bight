@@ -3,59 +3,59 @@
 
 ### Bug Fixes
 
-- Handle missing binary in hook
-- Switch to maintained yaml package
+- Handle missing binary in hook (#34)
+- Switch to maintained yaml package (#36)
 
 ### Documentation
 
-- Add GH Pages site w/ llms.txt
+- Add GH Pages site w/ llms.txt (#32)
 
 ### Miscellaneous
 
-- Upgrade to go 1.26
+- Upgrade to go 1.26 (#33)
 
 ### Refactor
 
-- Apply go fix modernizers
+- Apply go fix modernizers (#33)
 
 ## v0.3.1 - 2026-06-09
 
 ### Bug Fixes
 
-- Skip interactive config init when non-interactive
+- Skip interactive config init when non-interactive (#29)
 
 ### Documentation
 
-- Add usage for all commands
+- Add usage for all commands (#27)
 
 ### Miscellaneous
 
 - Streamline preview builds
-- Prevent divergences from changelog
+- Prevent divergences from changelog (#31)
 
 ### Refactor
 
-- Shared confirm prompt
+- Shared confirm prompt (#28)
 
 ## v0.3.0 - 2026-06-06
 
 ### Features
 
-- Add copy functionality (e.g. seeding/bootstrapping `.env` files)
+- Add copy functionality (e.g. seeding/bootstrapping `.env` files) (#23)
 
 ## v0.2.0 - 2026-05-28
 
 ### Bug Fixes
 
-- Skip files with no updates
+- Skip files with no updates (#24)
 
 ### Features
 
-- Specify config path via env var
+- Specify config path via env var (#25)
 
 ### Miscellaneous
 
-- Add on-demand preview builds
+- Add on-demand preview builds (#22)
 
 ## v0.1.0 - 2026-04-30
 
@@ -65,40 +65,40 @@
 
 ### Documentation
 
-- Add homebrew formula
+- Add homebrew formula (#19)
 
 ### Features
 
-- Support enabling backup files
+- Support enabling backup files (#20)
 
 ### Miscellaneous
 
-- Ignore local claude files
-- Add Taskfile
+- Ignore local claude files (#18)
+- Add Taskfile (#21)
 
 ## v0.0.2 - 2026-04-26
 
 ### Bug Fixes
 
-- Account for worktree context
-- Prevent partial writes and permissions loss
+- Account for worktree context (#17)
+- Prevent partial writes and permissions loss (#16)
 
 ### Miscellaneous
 
-- Invoke tap update on new tag
+- Invoke tap update on new tag (#15)
 
 ## v0.0.1 - 2026-04-17
 
 ### Bug Fixes
 
 - Graceful no-op when no config
-- Branch resolution in worktrees
+- Branch resolution in worktrees (#14)
 
 ### Documentation
 
-- Deterministic strategy
-- Style note and cleanup
-- Update summary and install
+- Deterministic strategy (#4)
+- Style note and cleanup (#11)
+- Update summary and install (#13)
 
 ### Features
 
@@ -106,20 +106,20 @@
 - Support yaml ending
 - Guided config creation
 - Add uninstall command
-- Add --version flag
-- Add diagnostics
+- Add --version flag (#2)
+- Add diagnostics (#3)
 - Add deterministic strategy
-- Add --dry-run flag
-- Partial comment preservation
-- Support global config
-- Support specifying config path
-- Support colorized output
-- Add sensitive flag
+- Add --dry-run flag (#5)
+- Partial comment preservation (#6)
+- Support global config (#8)
+- Support specifying config path (#9)
+- Support colorized output (#10)
+- Add sensitive flag (#12)
 
 ### Miscellaneous
 
 - Init project
 - Basic conventions and checks
-- Add tagged versions to release
+- Add tagged versions to release (#7)
 
 
