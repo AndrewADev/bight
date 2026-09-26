@@ -255,6 +255,126 @@ func TestMergeComments_OrphanedAnchorGoesToEnd(t *testing.T) {
 	}
 }
 
+func TestPatchAll_SpecialCharsNotEscaped(t *testing.T) {
+	path := writeTempEnv(t, "PASSWORD=\"abc999!\"\nPRICE='$5'\nDB_NAME=old\n")
+
+	if err := PatchAll(path, map[string]string{"DB_NAME": "new"}, nil); err != nil {
+		t.Fatalf("PatchAll: %v", err)
+	}
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	content := string(data)
+	for _, want := range []string{`PASSWORD="abc999!"`, `PRICE='$5'`} {
+		if !strings.Contains(content, want) {
+			t.Errorf("missing %s in:\n%s", want, content)
+		}
+	}
+
+	env, err := godotenv.Read(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if env["PASSWORD"] != "abc999!" {
+		t.Errorf("PASSWORD = %q, want %q", env["PASSWORD"], "abc999!")
+	}
+	if env["PRICE"] != "$5" {
+		t.Errorf("PRICE = %q, want %q", env["PRICE"], "$5")
+	}
+}
+
+func TestMarshal_EdgeCases(t *testing.T) {
+	tests := []struct {
+		name  string
+		value string
+		want  string
+	}{
+		{"plain", "new_db", `K="new_db"`},
+		{"integer", "8080", `K=8080`},
+		{"exclamation", "abc999!", `K="abc999!"`},
+		{"dollar", "$5", `K='$5'`},
+		{"backslash", `a\b`, `K="a\\b"`},
+		{"backtick", "a`b`", "K=\"a`b`\""},
+		{"newline", "line1\nline2", `K="line1\nline2"`},
+		{"carriage return", "a\rb", `K="a\rb"`},
+		{"single quote", "it's", `K="it's"`},
+		{"inner double quote", `say "hi" there`, `K="say \"hi\" there"`},
+		{"trailing double quote", `say "hi"`, `K='say "hi"'`},
+		{"only double quotes", `""`, `K='""'`},
+		{"dollar and single quote", "it's $5", `K="it's \$5"`},
+		{"dollar and newline", "$5\nx", `K="\$5\nx"`},
+		{"trailing double quote and single quote", `it's "hi"`, `K=it's "hi"`},
+		{"trailing backslash", `a\`, `K=a\`},
+		{"trailing backslash with space", `C:\My Dir\`, `K=C:\My Dir\`},
+		{"trailing backslash and dollar", `$5\`, `K=\$5\`},
+		{"trailing backslash and escaped dollar", `a\$b\`, `K=a\\$b\`},
+		{"trailing backslash and hash", `a#b\`, `K=a#b\`},
+		{"backslash before trailing space", `a\ `, `K="a\\ "`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := marshal(map[string]string{"K": tt.value})
+			if err != nil {
+				t.Fatalf("marshal: %v", err)
+			}
+			if got != tt.want {
+				t.Errorf("marshal = %s, want %s", got, tt.want)
+			}
+
+			path := filepath.Join(t.TempDir(), ".env")
+			if err := os.WriteFile(path, []byte(got+"\n"), 0600); err != nil {
+				t.Fatal(err)
+			}
+			env, err := godotenv.Read(path)
+			if err != nil {
+				t.Fatalf("godotenv.Read: %v", err)
+			}
+			if env["K"] != tt.value {
+				t.Errorf("read back %q, want %q", env["K"], tt.value)
+			}
+		})
+	}
+}
+
+func TestMarshal_Unrepresentable(t *testing.T) {
+	tests := []struct {
+		name  string
+		value string
+	}{
+		{"trailing backslash and newline", "a\nb\\"},
+		{"trailing double quote and newline", "a\n\"b\""},
+		{"trailing double quote, single quote and newline", "it's\n\"hi\""},
+		{"trailing backslash and leading space", ` a\`},
+		{"trailing backslash and comment marker", `a #b\`},
+		{"leading single quote and trailing double quote", `'a "b"`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got, err := marshal(map[string]string{"K": tt.value}); err == nil {
+				t.Errorf("marshal = %s, want error", got)
+			}
+		})
+	}
+}
+
+func TestPatchAll_UnrepresentableValueLeavesFile(t *testing.T) {
+	path := writeTempEnv(t, "DB_NAME=old\n")
+
+	if err := PatchAll(path, map[string]string{"DB_NAME": "a\nb\\"}, nil); err == nil {
+		t.Fatal("PatchAll: want error, got nil")
+	}
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(data) != "DB_NAME=old\n" {
+		t.Errorf("file = %q, want %q", string(data), "DB_NAME=old\n")
+	}
+}
+
 func TestPatchAll_NilCommentsNoOp(t *testing.T) {
 	path := writeTempEnv(t, "DB_NAME=foo\n")
 
