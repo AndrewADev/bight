@@ -10,11 +10,16 @@ body = """
 ### {{ group | upper_first }}
 {% for commit in commits %}
 - {{ commit.message | upper_first }}\
+{% if commit.remote.pr_number %} (#{{ commit.remote.pr_number }}){% endif %}\
 {% endfor %}
 {% endfor %}\n
 """
 trim = true
 footer = ""
+
+[remote.github]
+owner = "AndrewADev"
+repo = "bight"
 
 [git]
 conventional_commits = true
