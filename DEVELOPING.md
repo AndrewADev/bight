@@ -68,14 +68,19 @@ Releases are triggered by pushing a semver tag. The CI workflow builds 5-platfor
 
 Prerequisites: [`git-cliff`](https://git-cliff.org/docs/installation).
 
+
+```bash
+# 0. Optionally, verify next calculated version is as expected
+task next-version
+```
+
 ```bash
 # 1. Update CHANGELOG.md and stage the release commit
-git-cliff --unreleased --tag v0.2.0 --prepend CHANGELOG.md
-git commit -am "chore: release v0.2.0"
+task changelog -- v0.2.0
+task release-commit -- v0.2.0
 
 # 2. Tag and push
-git tag v0.2.0
-git push && git push --tags
+task tag -- v0.2.0
 ```
 
 CI will publish the release automatically once the tag is pushed.
@@ -84,5 +89,5 @@ CI will publish the release automatically once the tag is pushed.
 
 Format: `v0.MINOR.PATCH` (major is pinned at `0` until the config schema and CLI are stable).
 
-- **Minor bump** (`v0.2.0 → v0.3.0`): may include breaking changes to `.bight.yml` or the CLI interface.
+- **Minor bump** (`v0.2.0 → v0.3.0`): **may include breaking changes** to `.bight.yml` or the CLI interface.
 - **Patch bump** (`v0.2.0 → v0.2.1`): bug fixes only, no breaking changes.

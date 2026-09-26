@@ -1,4 +1,18 @@
 # Changelog
+## v0.4.0 - 2026-09-26
+
+### Bug Fixes
+
+- Prevent value modification due to escaping (#38)
+
+### Features
+
+- Preserve all full-line comments (#37)
+
+### Miscellaneous
+
+- Include PR numbers in CHANGELOG (#39)
+
 ## v0.3.2 - 2026-09-19
 
 ### Bug Fixes
