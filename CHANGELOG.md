@@ -1,4 +1,14 @@
 # Changelog
+## v0.5.0 - 2026-09-27
+
+### Bug Fixes
+
+- Validate templates (#41)
+
+### Features
+
+- Sanitize function for templates (#40)
+
 ## v0.4.0 - 2026-09-26
 
 ### Bug Fixes
