@@ -247,3 +247,102 @@ func TestRunChecks_CopySourceResolveError(t *testing.T) {
 		t.Errorf("expected fail for resolve error, got: %v", r)
 	}
 }
+
+func templateCfg(tmpl string) *config.Config {
+	return &config.Config{
+		Project:  "myapp",
+		Defaults: config.Defaults{BranchTemplate: tmpl},
+		EnvFiles: []config.EnvFile{
+			{Path: ".env", Vars: []config.Var{
+				{Name: "DB_NAME", Strategy: "template", On: "checkout"},
+			}},
+		},
+	}
+}
+
+func TestRunChecks_TemplateRenders(t *testing.T) {
+	deps := happyDeps
+	deps.branch = "feat/Login"
+	results := runChecks(templateCfg("db_{{slug .Branch}}"), nil, deps)
+	r, found := findByPrefix(results, "template:")
+	if !found || r.status != "ok" {
+		t.Fatalf("expected ok template result, got: %v", results)
+	}
+	if !strings.Contains(r.msg, `"db_feat_login"`) {
+		t.Errorf("expected rendered value in message, got %q", r.msg)
+	}
+}
+
+func TestRunChecks_TemplateInvalid(t *testing.T) {
+	tests := []struct {
+		name, tmpl, wantErr string
+	}{
+		{"undefined function", "db_{{nosuch .Branch}}", `function "nosuch" not defined`},
+		{"unclosed action", "db_{{slug .Branch", "unclosed action"},
+		{"unknown field", "db_{{.Brnch}}", "can't evaluate field Brnch"},
+		{"wrong arg count", "db_{{slug .Branch 3}}", "wrong number of args for slug"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			results := runChecks(templateCfg(tt.tmpl), nil, happyDeps)
+			r, found := findByPrefix(results, "template: does not render")
+			if !found || r.status != "fail" {
+				t.Fatalf("expected template fail, got: %v", results)
+			}
+			if !strings.Contains(r.msg, tt.wantErr) {
+				t.Errorf("expected %q in message, got %q", tt.wantErr, r.msg)
+			}
+		})
+	}
+}
+
+func TestRunChecks_TemplatePlaceholderBranch(t *testing.T) {
+	results := runChecks(templateCfg(""), nil, happyDeps)
+	r, found := findByPrefix(results, "template:")
+	if !found || r.status != "ok" {
+		t.Fatalf("expected ok template result, got: %v", results)
+	}
+	if !strings.Contains(r.msg, placeholderBranch) {
+		t.Errorf("expected placeholder branch in message, got %q", r.msg)
+	}
+}
+
+func TestRunChecks_NoTemplateVars(t *testing.T) {
+	cfg := templateCfg("{{nosuch}}")
+	cfg.EnvFiles[0].Vars[0].Strategy = "random"
+	results := runChecks(cfg, nil, happyDeps)
+	if _, found := findByPrefix(results, "template:"); found {
+		t.Errorf("expected no template result without template vars, got: %v", results)
+	}
+}
+
+func TestRunChecks_TemplateEmptyValue(t *testing.T) {
+	deps := happyDeps
+	deps.branch = "漢字"
+	results := runChecks(templateCfg("{{slug .Branch}}"), nil, deps)
+	r, found := findByPrefix(results, "template: renders an empty value")
+	if !found || r.status != "warn" {
+		t.Errorf("expected warn for empty rendered value, got: %v", results)
+	}
+}
+
+func TestRunChecks_TemplateBranchDropped(t *testing.T) {
+	deps := happyDeps
+	deps.branch = "漢字"
+	results := runChecks(templateCfg("db_{{slug .Branch}}"), nil, deps)
+	r, found := findByPrefix(results, "template:")
+	if !found || r.status != "warn" {
+		t.Fatalf("expected warn for branch-independent value, got: %v", results)
+	}
+	if !strings.Contains(r.msg, `"db_"`) {
+		t.Errorf("expected rendered value in message, got %q", r.msg)
+	}
+}
+
+func TestRunChecks_TemplateWithoutBranch(t *testing.T) {
+	results := runChecks(templateCfg("{{.Project}}_db"), nil, happyDeps)
+	r, found := findByPrefix(results, "template:")
+	if !found || r.status != "ok" {
+		t.Errorf("expected ok for template that does not use the branch, got: %v", results)
+	}
+}

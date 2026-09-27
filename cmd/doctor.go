@@ -9,6 +9,7 @@ import (
 	bcopy "github.com/AndrewADev/bight/internal/copy"
 	"github.com/AndrewADev/bight/internal/hook"
 	"github.com/AndrewADev/bight/internal/output"
+	"github.com/AndrewADev/bight/internal/strategy"
 	"github.com/spf13/cobra"
 )
 
@@ -36,7 +37,15 @@ type checkDeps struct {
 	// failure by the doctor check).
 	resolvedCopySources map[string]string
 	copyResolveErrors   map[string]error
+	// branch is the branch name used to render template vars. Empty when
+	// the current branch could not be resolved; placeholderBranch is used
+	// instead.
+	branch string
 }
+
+// placeholderBranch is the branch name used to render template vars when
+// the current branch cannot be resolved.
+const placeholderBranch = "feature/doctor-check"
 
 func runChecks(cfg *config.Config, cfgErr error, deps checkDeps) []result {
 	var results []result
@@ -77,7 +86,7 @@ func runChecks(cfg *config.Config, cfgErr error, deps checkDeps) []result {
 		results = append(results, ok("hook: installed"))
 	}
 
-	// Checks 5–7 require a loaded config
+	// Checks 5–9 require a loaded config
 	if cfgErr != nil {
 		results = append(results, warn("skipping env file and var checks — config could not be loaded"))
 		return results
@@ -118,7 +127,39 @@ func runChecks(cfg *config.Config, cfgErr error, deps checkDeps) []result {
 		results = append(results, ok("vars: all strategies valid"))
 	}
 
-	// Check 7: triggers valid
+	// Check 7: template vars render for the current branch
+	var templateVars []string
+	for _, ef := range cfg.EnvFiles {
+		for _, v := range ef.Vars {
+			if v.Strategy == "template" {
+				templateVars = append(templateVars, v.Name)
+			}
+		}
+	}
+	if len(templateVars) > 0 {
+		branch := deps.branch
+		branchDesc := fmt.Sprintf("branch %q", branch)
+		if branch == "" {
+			branch = placeholderBranch
+			branchDesc = fmt.Sprintf("placeholder branch %q", branch)
+		}
+		render := func(b string) (string, error) {
+			return strategy.Apply("template", strategy.Context{Branch: b, Project: cfg.Project}, cfg)
+		}
+		value, err := render(branch)
+		switch {
+		case err != nil:
+			results = append(results, fail(fmt.Sprintf("template: does not render for %s — %v (vars: %v)", branchDesc, err, templateVars)))
+		case value == "":
+			results = append(results, warn(fmt.Sprintf("template: renders an empty value for %s (vars: %v)", branchDesc, templateVars)))
+		case branchDropped(render, value):
+			results = append(results, warn(fmt.Sprintf("template: %q for %s contains nothing from the branch name; every such branch gets the same value (vars: %v)", value, branchDesc, templateVars)))
+		default:
+			results = append(results, ok(fmt.Sprintf("template: %q for %s (vars: %v)", value, branchDesc, templateVars)))
+		}
+	}
+
+	// Check 8: triggers valid
 	validTriggers := map[string]bool{triggerCheckout: true}
 	var badTriggers []string
 	for _, ef := range cfg.EnvFiles {
@@ -134,7 +175,7 @@ func runChecks(cfg *config.Config, cfgErr error, deps checkDeps) []result {
 		results = append(results, ok("vars: all triggers valid"))
 	}
 
-	// Check 8: copy sources resolve and exist (only for env_files with copy configured)
+	// Check 9: copy sources resolve and exist (only for env_files with copy configured)
 	var copyConfigured int
 	var badCopySources []string
 	for _, ef := range cfg.EnvFiles {
@@ -166,6 +207,17 @@ func runChecks(cfg *config.Config, cfgErr error, deps checkDeps) []result {
 	return results
 }
 
+// branchDropped reports whether value equals the template rendered with an
+// empty branch name, for a template whose output depends on the branch.
+func branchDropped(render func(branch string) (string, error), value string) bool {
+	empty, err := render("")
+	if err != nil || empty != value {
+		return false
+	}
+	probe, err := render("branch")
+	return err == nil && probe != empty
+}
+
 func coloredStatus(r result) string {
 	tag := fmt.Sprintf("%-6s", "["+r.status+"]")
 	switch r.status {
@@ -189,6 +241,7 @@ func doctorCmd() *cobra.Command {
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			_, gitErr := hook.HooksDir()
+			branch, _ := resolveBranch(".")
 			cfg, cfgPath, cfgSource, cfgErr := loadConfig()
 
 			existing := map[string]bool{}
@@ -227,6 +280,7 @@ func doctorCmd() *cobra.Command {
 				cfgSource:           cfgSource,
 				resolvedCopySources: resolvedSources,
 				copyResolveErrors:   resolveErrs,
+				branch:              branch,
 			})
 
 			fmt.Println("bight doctor:")
