@@ -103,6 +103,7 @@ bight doctor:
   [ok]   hook: installed
   [ok]   env file: .env
   [ok]   vars: all strategies valid
+  [ok]   template: "myapp_main" for branch "main" (vars: [DB_NAME])
   [ok]   vars: all triggers valid
 ```
 
