@@ -194,6 +194,21 @@ bight run --dry-run
 | `random` | Fresh 32-byte hex string | `JWT_SECRET`, tokens |
 | `deterministic` | Stable 64-char hex derived from project + branch | `DB_NAME` (same value across machines) |
 
+#### Template functions
+
+`branch_template` is a Go [`text/template`](https://pkg.go.dev/text/template) and supports these functions:
+
+| Function | Effect | Example |
+|---|---|---|
+| `slug` | Lowercases, transliterates accented Latin letters to ASCII (`é`->`e`, `ß`->`ss`, `ø`->`o`), and collapses each run of other characters outside `a-z0-9` into one `_`, trimming leading/trailing `_` | `{{.Branch \| slug}}`: `feat/Crème-Brûlée` -> `feat_creme_brulee` |
+
+`slug` produces names that are valid unquoted identifiers in most databases:
+
+```yaml
+defaults:
+  branch_template: "{{.Project}}_{{.Branch | slug}}"  # myapp_feat/login-page -> myapp_feat_login_page
+```
+
 ### Sensitive vars (`sensitive`)
 
 Mark a var `sensitive: true` to prevent its value from appearing in console output. The value is still written to the `.env` file normally — only the terminal display is affected.

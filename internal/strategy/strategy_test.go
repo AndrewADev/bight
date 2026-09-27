@@ -41,6 +41,52 @@ func TestApplyTemplate_Custom(t *testing.T) {
 	}
 }
 
+func TestApplyTemplate_Slug(t *testing.T) {
+	cfg := &config.Config{
+		Project:  "myapp",
+		Defaults: config.Defaults{BranchTemplate: "{{.Project}}_{{.Branch | slug}}"},
+	}
+	ctx := Context{Branch: "feat/Login-Page", Project: "myapp"}
+	val, err := Apply("template", ctx, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if val != "myapp_feat_login_page" {
+		t.Errorf("got %q, want %q", val, "myapp_feat_login_page")
+	}
+}
+
+func TestSlug(t *testing.T) {
+	tests := []struct {
+		in, want string
+	}{
+		{"main", "main"},
+		{"feat/login", "feat_login"},
+		{"Feat/Login-Page", "feat_login_page"},
+		{"fix//double--sep", "fix_double_sep"},
+		{"/leading/and/trailing/", "leading_and_trailing"},
+		{"release/v1.2.3", "release_v1_2_3"},
+		{"user@host#42", "user_host_42"},
+		{"café/über", "cafe_uber"},
+		{"feat/Crème-Brûlée", "feat_creme_brulee"},
+		{"año/São-Paulo", "ano_sao_paulo"},
+		{"Tiếng-Việt", "tieng_viet"},
+		{"fix/Straße", "fix_strasse"},
+		{"ÆRØ/Œuvre", "aero_oeuvre"},
+		{"Łódź/Đorđe", "lodz_dorde"},
+		{"Þór/Ðað", "thor_dad"},
+		{"İstanbul", "istanbul"},
+		{"日本/feat", "feat"},
+		{"---", ""},
+		{"", ""},
+	}
+	for _, tt := range tests {
+		if got := slug(tt.in); got != tt.want {
+			t.Errorf("slug(%q) = %q, want %q", tt.in, got, tt.want)
+		}
+	}
+}
+
 func TestApplyRandom(t *testing.T) {
 	ctx := Context{Branch: "main", Project: "myapp"}
 	val, err := Apply("random", ctx, testCfg)
