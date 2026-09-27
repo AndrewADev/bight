@@ -121,6 +121,170 @@ func TestMainWorktreeRoot_Worktree(t *testing.T) {
 	}
 }
 
+func readHook(t *testing.T, path string) string {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("reading hook: %v", err)
+	}
+	return string(data)
+}
+
+func TestInstallFresh(t *testing.T) {
+	dir := makeHooksDir(t)
+	path := hookFile(dir)
+
+	if err := install(path, "/usr/local/bin/bight"); err != nil {
+		t.Fatalf("install() error: %v", err)
+	}
+
+	want := fmt.Sprintf(hookScript, "/usr/local/bin/bight")
+	if got := readHook(t, path); got != want {
+		t.Errorf("got:\n%s\nwant:\n%s", got, want)
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := info.Mode().Perm(); got != 0755 {
+		t.Errorf("permissions = %o, want %o", got, 0755)
+	}
+}
+
+func TestInstallReinstallReplacesBlock(t *testing.T) {
+	dir := makeHooksDir(t)
+	path := hookFile(dir)
+
+	if err := install(path, "/old/bight"); err != nil {
+		t.Fatalf("first install() error: %v", err)
+	}
+	if err := install(path, "/new/bight"); err != nil {
+		t.Fatalf("second install() error: %v", err)
+	}
+
+	content := readHook(t, path)
+	if n := strings.Count(content, blockBegin); n != 1 {
+		t.Errorf("found %d bight blocks, want 1:\n%s", n, content)
+	}
+	if strings.Contains(content, "/old/bight") {
+		t.Errorf("old binary path still present:\n%s", content)
+	}
+	if !strings.Contains(content, "/new/bight") {
+		t.Errorf("new binary path missing:\n%s", content)
+	}
+	if want := fmt.Sprintf(hookScript, "/new/bight"); content != want {
+		t.Errorf("got:\n%s\nwant:\n%s", content, want)
+	}
+}
+
+func TestInstallReplacesLegacyLine(t *testing.T) {
+	dir := makeHooksDir(t)
+	path := hookFile(dir)
+	writeHook(t, path, "#!/bin/sh\n/some/other/tool run \"$@\"\n/old/bight post-checkout \"$@\"\n")
+
+	if err := install(path, "/new/bight"); err != nil {
+		t.Fatalf("install() error: %v", err)
+	}
+
+	content := readHook(t, path)
+	if strings.Contains(content, "/old/bight") {
+		t.Errorf("legacy line still present:\n%s", content)
+	}
+	if n := strings.Count(content, blockBegin); n != 1 {
+		t.Errorf("found %d bight blocks, want 1:\n%s", n, content)
+	}
+	if !strings.Contains(content, "/some/other/tool") {
+		t.Error("other hook content was removed")
+	}
+}
+
+func TestInstallPreservesForeignContent(t *testing.T) {
+	dir := makeHooksDir(t)
+	path := hookFile(dir)
+	writeHook(t, path, "#!/bin/sh\n/some/other/tool run \"$@\"\n")
+
+	if err := install(path, "/usr/local/bin/bight"); err != nil {
+		t.Fatalf("install() error: %v", err)
+	}
+
+	want := "#!/bin/sh\n/some/other/tool run \"$@\"\n" + fmt.Sprintf(hookBlock, "/usr/local/bin/bight")
+	if got := readHook(t, path); got != want {
+		t.Errorf("got:\n%s\nwant:\n%s", got, want)
+	}
+}
+
+func TestInstallKeepsExistingShebang(t *testing.T) {
+	dir := makeHooksDir(t)
+	path := hookFile(dir)
+	writeHook(t, path, "#!/bin/bash\n/some/other/tool run \"$@\"\n")
+
+	if err := install(path, "/usr/local/bin/bight"); err != nil {
+		t.Fatalf("install() error: %v", err)
+	}
+
+	content := readHook(t, path)
+	if !strings.HasPrefix(content, "#!/bin/bash\n") {
+		t.Errorf("existing shebang not kept:\n%s", content)
+	}
+	if strings.Contains(content, shebang) {
+		t.Errorf("default shebang added alongside existing one:\n%s", content)
+	}
+}
+
+func TestInstallAddsMissingShebang(t *testing.T) {
+	dir := makeHooksDir(t)
+	path := hookFile(dir)
+	writeHook(t, path, "/some/other/tool run \"$@\"\n")
+
+	if err := install(path, "/usr/local/bin/bight"); err != nil {
+		t.Fatalf("install() error: %v", err)
+	}
+
+	want := "#!/bin/sh\n/some/other/tool run \"$@\"\n" + fmt.Sprintf(hookBlock, "/usr/local/bin/bight")
+	if got := readHook(t, path); got != want {
+		t.Errorf("got:\n%s\nwant:\n%s", got, want)
+	}
+}
+
+func TestInstallPreservesPermissions(t *testing.T) {
+	dir := makeHooksDir(t)
+	path := hookFile(dir)
+	writeHook(t, path, "#!/bin/sh\n/some/other/tool run \"$@\"\n")
+	if err := os.Chmod(path, 0750); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := install(path, "/usr/local/bin/bight"); err != nil {
+		t.Fatalf("install() error: %v", err)
+	}
+
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := info.Mode().Perm(); got != 0750 {
+		t.Errorf("permissions = %o, want %o", got, 0750)
+	}
+}
+
+func TestInstallThenUninstallRoundTrip(t *testing.T) {
+	dir := makeHooksDir(t)
+	path := hookFile(dir)
+	original := "#!/bin/sh\n/some/other/tool run \"$@\"\n"
+	writeHook(t, path, original)
+
+	if err := install(path, "/usr/local/bin/bight"); err != nil {
+		t.Fatalf("install() error: %v", err)
+	}
+	if err := uninstall(path); err != nil {
+		t.Fatalf("uninstall() error: %v", err)
+	}
+
+	if got := readHook(t, path); got != original {
+		t.Errorf("got:\n%s\nwant:\n%s", got, original)
+	}
+}
+
 // fakeBight writes an executable at path that records its arguments to logFile.
 func fakeBight(t *testing.T, path, logFile string) {
 	t.Helper()
