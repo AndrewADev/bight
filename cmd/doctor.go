@@ -240,6 +240,7 @@ func doctorCmd() *cobra.Command {
 		Short:        "Validate bight setup and config",
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			_ = chdirToRepoRoot()
 			_, gitErr := hook.HooksDir()
 			branch, _ := resolveBranch(".")
 			cfg, cfgPath, cfgSource, cfgErr := loadConfig()

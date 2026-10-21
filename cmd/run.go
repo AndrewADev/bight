@@ -17,6 +17,9 @@ func runCmd() *cobra.Command {
 		Short: "Manually apply env patching for the current branch",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := chdirToRepoRoot(); err != nil {
+				return err
+			}
 			branch, err := resolveBranch(".")
 			if err != nil {
 				return err
@@ -24,7 +27,7 @@ func runCmd() *cobra.Command {
 
 			cfg, _, _, err := loadConfig()
 			if errors.Is(err, os.ErrNotExist) {
-				return fmt.Errorf("no .bight.yml or .bight.yaml found in current directory")
+				return fmt.Errorf("no .bight.yml or .bight.yaml found at repo root")
 			}
 			if err != nil {
 				return err
