@@ -173,7 +173,7 @@ func TestPatchEnvFiles_BackupCreated(t *testing.T) {
 		},
 	}
 
-	if err := patchEnvFiles(cfg, "feature-x"); err != nil {
+	if err := patchEnvFiles(cfg, "feature-x", ""); err != nil {
 		t.Fatalf("patchEnvFiles: %v", err)
 	}
 
@@ -205,7 +205,7 @@ func TestPatchEnvFiles_SkipsWhenNoVars(t *testing.T) {
 		},
 	}
 
-	if err := patchEnvFiles(cfg, "feature-x"); err != nil {
+	if err := patchEnvFiles(cfg, "feature-x", ""); err != nil {
 		t.Fatalf("patchEnvFiles: %v", err)
 	}
 
@@ -249,7 +249,7 @@ func TestPatchEnvFiles_SkipsWhenAllVarsNonCheckout(t *testing.T) {
 		},
 	}
 
-	if err := patchEnvFiles(cfg, "feature-x"); err != nil {
+	if err := patchEnvFiles(cfg, "feature-x", ""); err != nil {
 		t.Fatalf("patchEnvFiles: %v", err)
 	}
 
@@ -283,7 +283,7 @@ func TestPatchEnvFiles_NoBackupWhenSkipped(t *testing.T) {
 		},
 	}
 
-	if err := patchEnvFiles(cfg, "feature-x"); err != nil {
+	if err := patchEnvFiles(cfg, "feature-x", ""); err != nil {
 		t.Fatalf("patchEnvFiles: %v", err)
 	}
 
@@ -314,7 +314,7 @@ func TestPatchEnvFiles_CopyWhenDestMissing(t *testing.T) {
 		},
 	}
 
-	if err := patchEnvFiles(cfg, "feat-x"); err != nil {
+	if err := patchEnvFiles(cfg, "feat-x", ""); err != nil {
 		t.Fatalf("patchEnvFiles: %v", err)
 	}
 
@@ -355,7 +355,7 @@ func TestPatchEnvFiles_NoCopyWhenDestExistsAndOverwriteFalse(t *testing.T) {
 		},
 	}
 
-	if err := patchEnvFiles(cfg, "feat-x"); err != nil {
+	if err := patchEnvFiles(cfg, "feat-x", ""); err != nil {
 		t.Fatalf("patchEnvFiles: %v", err)
 	}
 
@@ -394,7 +394,7 @@ func TestPatchEnvFiles_OverwriteClobbers(t *testing.T) {
 		},
 	}
 
-	if err := patchEnvFiles(cfg, "feat-x"); err != nil {
+	if err := patchEnvFiles(cfg, "feat-x", ""); err != nil {
 		t.Fatalf("patchEnvFiles: %v", err)
 	}
 
@@ -437,7 +437,7 @@ func TestPatchEnvFiles_NoBackupByDefault(t *testing.T) {
 		},
 	}
 
-	if err := patchEnvFiles(cfg, "feature-x"); err != nil {
+	if err := patchEnvFiles(cfg, "feature-x", ""); err != nil {
 		t.Fatalf("patchEnvFiles: %v", err)
 	}
 

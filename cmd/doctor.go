@@ -240,10 +240,15 @@ func doctorCmd() *cobra.Command {
 		Short:        "Validate bight setup and config",
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			_ = chdirToRepoRoot()
-			_, gitErr := hook.HooksDir()
-			branch, _ := resolveBranch(".")
-			cfg, cfgPath, cfgSource, cfgErr := loadConfig()
+			repo, gitErr := enterRepo()
+			var branch, mainRoot string
+			hookErr := gitErr
+			if repo != nil {
+				branch = repo.Branch
+				mainRoot = repo.MainRoot()
+				hookErr = hook.Check(repo)
+			}
+			cfg, cfgPath, cfgSource, cfgErr := loadConfig(mainRoot)
 
 			existing := map[string]bool{}
 			resolvedSources := map[string]string{}
@@ -256,10 +261,6 @@ func doctorCmd() *cobra.Command {
 
 				// Resolve copy sources up-front so runChecks can be purely
 				// validation logic.
-				var mainRoot string
-				if root, err := hook.MainWorktreeRoot(); err == nil {
-					mainRoot = root
-				}
 				homeDir, _ := os.UserHomeDir()
 				for _, ef := range cfg.EnvFiles {
 					if ef.Copy == nil {
@@ -275,7 +276,7 @@ func doctorCmd() *cobra.Command {
 			}
 			results := runChecks(cfg, cfgErr, checkDeps{
 				gitOK:               gitErr == nil,
-				hookErr:             hook.Check(),
+				hookErr:             hookErr,
 				existingEnvFiles:    existing,
 				cfgPath:             cfgPath,
 				cfgSource:           cfgSource,

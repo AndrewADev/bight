@@ -13,10 +13,11 @@ func uninstallCmd() *cobra.Command {
 		Use:   "uninstall",
 		Short: "Remove post-checkout hook from .git/hooks/",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := chdirToRepoRoot(); err != nil {
+			repo, err := enterRepo()
+			if err != nil {
 				return err
 			}
-			if err := hook.Uninstall(); err != nil {
+			if err := hook.Uninstall(repo); err != nil {
 				if errors.Is(err, hook.ErrNotInstalled) {
 					fmt.Println("bight: hook not installed, ignoring")
 					return nil

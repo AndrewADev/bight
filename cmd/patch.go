@@ -8,7 +8,6 @@ import (
 	"github.com/AndrewADev/bight/internal/config"
 	bcopy "github.com/AndrewADev/bight/internal/copy"
 	"github.com/AndrewADev/bight/internal/env"
-	"github.com/AndrewADev/bight/internal/hook"
 	"github.com/AndrewADev/bight/internal/output"
 	"github.com/AndrewADev/bight/internal/strategy"
 )
@@ -56,25 +55,12 @@ func dryRunEnvFiles(cfg *config.Config, branch string) []dryRunResult {
 	return results
 }
 
-func patchEnvFiles(cfg *config.Config, branch string) error {
+// patchEnvFiles applies checkout patches and copies to every env file in cfg.
+// mainRoot is the base for relative copy sources; empty when unknown.
+func patchEnvFiles(cfg *config.Config, branch, mainRoot string) error {
 	ctx := strategy.Context{
 		Branch:  branch,
 		Project: cfg.Project,
-	}
-
-	// Resolve the main worktree root lazily — only needed when an env_file
-	// has a `copy:` configured.
-	var (
-		mainRoot    string
-		mainRootErr error
-		mainOnce    bool
-	)
-	resolveMain := func() (string, error) {
-		if !mainOnce {
-			mainRoot, mainRootErr = hook.MainWorktreeRoot()
-			mainOnce = true
-		}
-		return mainRoot, mainRootErr
 	}
 
 	for _, ef := range cfg.EnvFiles {
@@ -120,12 +106,9 @@ func patchEnvFiles(cfg *config.Config, branch string) error {
 		}
 
 		if willCopy {
-			// resolveMain is best-effort: absolute and ~-prefixed sources
-			// don't need it. ResolveSource will error if a relative source
-			// is given without a usable base.
-			base, _ := resolveMain()
+			// ResolveSource errors on a relative source when mainRoot is empty.
 			homeDir, _ := os.UserHomeDir()
-			src, err := bcopy.ResolveSource(ef.Copy.Source, base, homeDir)
+			src, err := bcopy.ResolveSource(ef.Copy.Source, mainRoot, homeDir)
 			if err != nil {
 				return fmt.Errorf("copy %s: %w", ef.Path, err)
 			}
