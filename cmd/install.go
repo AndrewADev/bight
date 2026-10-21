@@ -18,6 +18,9 @@ func installCmd() *cobra.Command {
 		Use:   "install",
 		Short: "Write post-checkout hook into .git/hooks/",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := chdirToRepoRoot(); err != nil {
+				return err
+			}
 			if err := hook.Install(); err != nil {
 				return err
 			}

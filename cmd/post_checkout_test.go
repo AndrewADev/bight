@@ -122,3 +122,43 @@ func TestResolveBranch_MissingHead(t *testing.T) {
 		t.Fatal("expected error for missing HEAD, got nil")
 	}
 }
+
+func TestFindRepoRoot_FromSubdir(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.Mkdir(filepath.Join(dir, ".git"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	sub := filepath.Join(dir, "a", "b")
+	if err := os.MkdirAll(sub, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := findRepoRoot(sub)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	want, _ := filepath.EvalSymlinks(dir)
+	gotResolved, _ := filepath.EvalSymlinks(got)
+	if gotResolved != want {
+		t.Errorf("got %q, want %q", gotResolved, want)
+	}
+}
+
+func TestFindRepoRoot_WorktreeFile(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, ".git"), []byte("gitdir: /x\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	sub := filepath.Join(dir, "sub")
+	if err := os.Mkdir(sub, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := findRepoRoot(sub)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != dir {
+		t.Errorf("got %q, want %q", got, dir)
+	}
+}
