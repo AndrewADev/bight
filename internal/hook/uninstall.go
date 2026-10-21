@@ -6,12 +6,15 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/AndrewADev/bight/internal/git"
 )
 
 var ErrNotInstalled = errors.New("bight: hook not installed")
 
-func Uninstall() error {
-	return uninstall(filepath.Join(".git", "hooks", "post-checkout"))
+// Uninstall removes bight's block from the repo's post-checkout hook.
+func Uninstall(repo *git.Repo) error {
+	return uninstall(filepath.Join(repo.HooksDir(), "post-checkout"))
 }
 
 func uninstall(hookPath string) error {

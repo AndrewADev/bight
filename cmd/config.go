@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 
 	"github.com/AndrewADev/bight/internal/config"
-	"github.com/AndrewADev/bight/internal/hook"
 )
 
 var configPath string
@@ -52,7 +51,10 @@ func configOriginSuffix(path string, s configSource) string {
 	}
 }
 
-func loadConfig() (*config.Config, string, configSource, error) {
+// loadConfig resolves the repo config from --config, BIGHT_CONFIG or the
+// working directory, falling back to .bight.yml in mainRoot when it differs
+// from the working directory. An empty mainRoot disables the fallback.
+func loadConfig(mainRoot string) (*config.Config, string, configSource, error) {
 	if configPath != "" {
 		cfg, _, err := config.LoadFrom(configPath)
 		// Always echo back the requested path so diagnostics can show *what*
@@ -76,19 +78,18 @@ func loadConfig() (*config.Config, string, configSource, error) {
 	// Without this, `git worktree add` into a clean directory lands in a
 	// worktree where bight is a silent no-op — which defeats the whole
 	// point of the `copy:` feature.
-	root, rerr := hook.MainWorktreeRoot()
-	if rerr != nil {
-		return nil, "", sourceAuto, err // surface original ErrNotExist
+	if mainRoot == "" {
+		return nil, "", sourceAuto, err
 	}
 	cwd, _ := os.Getwd()
 	cwdAbs, _ := filepath.Abs(cwd)
-	rootAbs, _ := filepath.Abs(root)
+	rootAbs, _ := filepath.Abs(mainRoot)
 	if cwdAbs == rootAbs {
 		// We're already in the main worktree; no fallback location to try.
 		return nil, "", sourceAuto, err
 	}
 	for _, name := range []string{".bight.yml", ".bight.yaml"} {
-		p := filepath.Join(root, name)
+		p := filepath.Join(mainRoot, name)
 		c, _, ferr := config.LoadFrom(p)
 		if ferr == nil {
 			return c, p, sourceAuto, nil

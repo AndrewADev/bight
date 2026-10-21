@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/AndrewADev/bight/internal/git"
 )
 
 func hookFile(dir string) string {
@@ -131,5 +133,36 @@ func TestUninstallSharedHookWithBlock(t *testing.T) {
 	}
 	if !strings.Contains(content, "/some/other/tool") {
 		t.Error("other hook content was removed")
+	}
+}
+
+func TestUninstall_LinkedWorktree(t *testing.T) {
+	main := makeHooksDir(t)
+	writeHook(t, hookFile(main), "#!/bin/sh\n"+blockBegin+"\nbight post-checkout \"$@\"\n"+blockEnd+"\n")
+	worktreeGitDir := filepath.Join(main, ".git", "worktrees", "wt")
+	if err := os.MkdirAll(worktreeGitDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(worktreeGitDir, "commondir"), []byte("../.."), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(worktreeGitDir, "HEAD"), []byte("ref: refs/heads/wt\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	wt := t.TempDir()
+	if err := os.WriteFile(filepath.Join(wt, ".git"), []byte("gitdir: "+worktreeGitDir), 0644); err != nil {
+		t.Fatal(err)
+	}
+	repo, err := git.Discover(wt)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := Uninstall(repo); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	data, err := os.ReadFile(hookFile(main))
+	if err == nil && strings.Contains(string(data), blockBegin) {
+		t.Errorf("bight block still present in main repo hook:\n%s", data)
 	}
 }

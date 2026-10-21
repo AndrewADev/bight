@@ -56,7 +56,7 @@ func TestLoadConfig_EnvVar(t *testing.T) {
 
 	t.Setenv(envConfigPath, custom)
 
-	cfg, path, source, err := loadConfig()
+	cfg, path, source, err := loadConfig("")
 	if err != nil {
 		t.Fatalf("loadConfig: %v", err)
 	}
@@ -84,7 +84,7 @@ func TestLoadConfig_FlagBeatsEnv(t *testing.T) {
 	configPath = flagFile
 	t.Cleanup(func() { configPath = "" })
 
-	cfg, path, source, err := loadConfig()
+	cfg, path, source, err := loadConfig("")
 	if err != nil {
 		t.Fatalf("loadConfig: %v", err)
 	}
@@ -104,7 +104,7 @@ func TestLoadConfig_EnvMissingFileFails(t *testing.T) {
 
 	t.Setenv(envConfigPath, "/nonexistent/bight.yml")
 
-	_, _, _, err := loadConfig()
+	_, _, _, err := loadConfig("")
 	if err == nil {
 		t.Fatal("expected error when BIGHT_CONFIG points to a missing file")
 	}
@@ -119,7 +119,7 @@ func TestLoadConfig_AutoDiscoverWhenUnset(t *testing.T) {
 	// Drop a .bight.yml in the (now-current) clean dir.
 	writeCfg(t, filepath.Join(clean, ".bight.yml"), "autoapp")
 
-	cfg, path, source, err := loadConfig()
+	cfg, path, source, err := loadConfig("")
 	if err != nil {
 		t.Fatalf("loadConfig: %v", err)
 	}
@@ -164,5 +164,25 @@ func TestRunChecks_ConfigPathShownForFlag(t *testing.T) {
 	}
 	if !strings.Contains(r.msg, "(from --config)") {
 		t.Errorf("expected flag source hint, got %q", r.msg)
+	}
+}
+
+func TestLoadConfig_FallsBackToMainRoot(t *testing.T) {
+	isolateConfigEnv(t)
+	mainRoot := t.TempDir()
+	writeCfg(t, filepath.Join(mainRoot, ".bight.yml"), "mainapp")
+
+	cfg, path, source, err := loadConfig(mainRoot)
+	if err != nil {
+		t.Fatalf("loadConfig: %v", err)
+	}
+	if cfg.Project != "mainapp" {
+		t.Errorf("Project = %q, want mainapp", cfg.Project)
+	}
+	if want := filepath.Join(mainRoot, ".bight.yml"); path != want {
+		t.Errorf("path = %q, want %q", path, want)
+	}
+	if source != sourceAuto {
+		t.Errorf("source = %v, want sourceAuto", source)
 	}
 }
