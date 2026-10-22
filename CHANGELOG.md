@@ -1,4 +1,13 @@
 # Changelog
+## v0.5.1 - 2026-10-22
+
+### Miscellaneous
+
+- Add renovate config (#43)
+- Update module go.yaml.in/yaml/v3 to v3.0.5 (#44)
+- Update module golang.org/x/text to v0.43.0 (#45)
+- Update github actions (#47)
+
 ## v0.5.0 - 2026-09-27
 
 ### Bug Fixes
