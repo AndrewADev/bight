@@ -1,4 +1,15 @@
 # Changelog
+## v0.5.2 - 2026-10-23
+
+### Bug Fixes
+
+- Subdirectory failure (#42)
+- Inconsistent git interaction (#42)
+
+### Miscellaneous
+
+- Bump go version (#48)
+
 ## v0.5.1 - 2026-10-22
 
 ### Miscellaneous
