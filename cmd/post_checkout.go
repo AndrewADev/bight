@@ -2,8 +2,10 @@ package cmd
 
 import (
 	"errors"
+	"fmt"
 	"os"
 
+	"github.com/AndrewADev/bight/internal/output"
 	"github.com/spf13/cobra"
 )
 
@@ -31,6 +33,12 @@ func postCheckoutCmd() *cobra.Command {
 				return err
 			}
 
+			if repo.Detached {
+				if hasCheckoutActions(cfg) {
+					fmt.Println(output.Dim("bight: detached HEAD; leaving env files unchanged"))
+				}
+				return nil
+			}
 			return patchEnvFiles(cfg, repo.Branch, repo.MainRoot())
 		},
 	}

@@ -24,8 +24,11 @@ type Repo struct {
 	GitDir string
 	// CommonDir is the git directory shared by all worktrees, where hooks live.
 	CommonDir string
-	// Branch is the checked-out branch name, or the commit hash on a detached HEAD.
+	// Branch is the checked-out branch name. It is empty on a detached HEAD.
 	Branch string
+	// Detached is true when HEAD points at a commit rather than a branch, as
+	// during a rebase, a bisect or after `git checkout --detach`.
+	Detached bool
 }
 
 // MainRoot returns the working directory of the main worktree.
@@ -53,7 +56,7 @@ func Discover(dir string) (*Repo, error) {
 	if err != nil {
 		return nil, err
 	}
-	branch, err := readBranch(gitDir)
+	branch, detached, err := readBranch(gitDir)
 	if err != nil {
 		return nil, err
 	}
@@ -62,6 +65,7 @@ func Discover(dir string) (*Repo, error) {
 		GitDir:    gitDir,
 		CommonDir: commonDir,
 		Branch:    branch,
+		Detached:  detached,
 	}, nil
 }
 
@@ -132,15 +136,17 @@ func resolveCommonDir(gitDir string) (string, error) {
 	return filepath.Clean(commonDir), nil
 }
 
-func readBranch(gitDir string) (string, error) {
+// readBranch reads gitDir/HEAD and returns the branch it names. It reports
+// detached when HEAD holds a commit hash or a ref outside refs/heads/.
+func readBranch(gitDir string) (branch string, detached bool, err error) {
 	data, err := os.ReadFile(filepath.Join(gitDir, "HEAD"))
 	if err != nil {
-		return "", fmt.Errorf("reading HEAD: %w", err)
+		return "", false, fmt.Errorf("reading HEAD: %w", err)
 	}
 	head := strings.TrimSpace(string(data))
 	const prefix = "ref: refs/heads/"
 	if strings.HasPrefix(head, prefix) {
-		return head[len(prefix):], nil
+		return head[len(prefix):], false, nil
 	}
-	return head, nil
+	return "", true, nil
 }

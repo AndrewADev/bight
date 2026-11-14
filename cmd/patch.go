@@ -33,6 +33,22 @@ func shouldCopy(ef config.EnvFile, existedBefore bool) bool {
 	return !existedBefore || ef.Copy.Overwrite
 }
 
+// hasCheckoutActions reports whether any env file in cfg has a copy source
+// or a var patched on checkout.
+func hasCheckoutActions(cfg *config.Config) bool {
+	for _, ef := range cfg.EnvFiles {
+		if ef.Copy != nil {
+			return true
+		}
+		for _, v := range ef.Vars {
+			if v.On == triggerCheckout {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func dryRunEnvFiles(cfg *config.Config, branch string) []dryRunResult {
 	ctx := strategy.Context{Branch: branch, Project: cfg.Project}
 	var results []dryRunResult
