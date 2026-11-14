@@ -445,3 +445,25 @@ func TestPatchEnvFiles_NoBackupByDefault(t *testing.T) {
 		t.Errorf("expected no backup file, but it exists")
 	}
 }
+
+func TestHasCheckoutActions(t *testing.T) {
+	tests := []struct {
+		name string
+		copy *config.Copy
+		vars []config.Var
+		want bool
+	}{
+		{"no vars", nil, nil, false},
+		{"copy only", &config.Copy{Source: "a.env"}, nil, true},
+		{"non-checkout only", nil, []config.Var{{Name: "A", Strategy: "random", On: "manual"}}, false},
+		{"checkout var", nil, []config.Var{{Name: "A", Strategy: "random", On: "manual"}, {Name: "B", Strategy: "template", On: "checkout"}}, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &config.Config{EnvFiles: []config.EnvFile{{Path: ".env", Copy: tt.copy, Vars: tt.vars}}}
+			if got := hasCheckoutActions(cfg); got != tt.want {
+				t.Errorf("hasCheckoutActions = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

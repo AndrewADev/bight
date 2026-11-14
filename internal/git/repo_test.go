@@ -105,8 +105,37 @@ func TestDiscover_DetachedHead(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if repo.Branch != hash {
-		t.Errorf("Branch = %q, want %q", repo.Branch, hash)
+	if !repo.Detached {
+		t.Error("Detached = false, want true")
+	}
+	if repo.Branch != "" {
+		t.Errorf("Branch = %q, want empty", repo.Branch)
+	}
+}
+
+func TestDiscover_LinkedWorktreeDetached(t *testing.T) {
+	main := t.TempDir()
+	makeMainRepo(t, main, "main")
+	worktreeGitDir := makeLinkedWorktree(t, main, "wt", "unused")
+	writeFile(t, filepath.Join(worktreeGitDir, "HEAD"), "abc1234def5678900000000000000000000000000\n")
+
+	wt := t.TempDir()
+	writeFile(t, filepath.Join(wt, ".git"), "gitdir: "+worktreeGitDir+"\n")
+
+	repo, err := Discover(wt)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !repo.Detached || repo.Branch != "" {
+		t.Errorf("got Branch=%q Detached=%v, want detached with empty branch", repo.Branch, repo.Detached)
+	}
+
+	mainRepo, err := Discover(main)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if mainRepo.Detached || mainRepo.Branch != "main" {
+		t.Errorf("main worktree: got Branch=%q Detached=%v, want main", mainRepo.Branch, mainRepo.Detached)
 	}
 }
 

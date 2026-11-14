@@ -41,6 +41,8 @@ type checkDeps struct {
 	// the current branch could not be resolved; placeholderBranch is used
 	// instead.
 	branch string
+	// detached is true when HEAD points at a commit rather than a branch.
+	detached bool
 }
 
 // placeholderBranch is the branch name used to render template vars when
@@ -84,6 +86,11 @@ func runChecks(cfg *config.Config, cfgErr error, deps checkDeps) []result {
 		results = append(results, info("hook: not installed — run `bight install` to automate on checkout"))
 	} else {
 		results = append(results, ok("hook: installed"))
+	}
+
+	// Check 4b: detached HEAD (warn only)
+	if deps.detached {
+		results = append(results, warn("HEAD: detached — post-checkout leaves env files unchanged and `bight run` refuses until a branch is checked out"))
 	}
 
 	// Checks 5–9 require a loaded config
@@ -242,9 +249,11 @@ func doctorCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo, gitErr := enterRepo()
 			var branch, mainRoot string
+			var detached bool
 			hookErr := gitErr
 			if repo != nil {
 				branch = repo.Branch
+				detached = repo.Detached
 				mainRoot = repo.MainRoot()
 				hookErr = hook.Check(repo)
 			}
@@ -283,6 +292,7 @@ func doctorCmd() *cobra.Command {
 				resolvedCopySources: resolvedSources,
 				copyResolveErrors:   resolveErrs,
 				branch:              branch,
+				detached:            detached,
 			})
 
 			fmt.Println("bight doctor:")
