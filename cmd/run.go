@@ -9,17 +9,23 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var errDetachedRun = errors.New("HEAD is detached; check out a branch before running bight")
+
 func runCmd() *cobra.Command {
 	var dryRun bool
 
 	cmd := &cobra.Command{
-		Use:   "run",
-		Short: "Manually apply env patching for the current branch",
-		Args:  cobra.NoArgs,
+		Use:          "run",
+		Short:        "Manually apply env patching for the current branch",
+		Args:         cobra.NoArgs,
+		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo, err := enterRepo()
 			if err != nil {
 				return err
+			}
+			if repo.Detached {
+				return errDetachedRun
 			}
 
 			cfg, _, _, err := loadConfig(repo.MainRoot())

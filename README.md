@@ -291,6 +291,12 @@ A few values fit none of the forms, such as a value with a line break that ends 
 |---|---|
 | `checkout` | Every branch switch |
 
+#### Detached HEAD
+
+A checkout that leaves HEAD on a commit rather than a branch (`git checkout --detach`, `git bisect`, and the intermediate steps of `git rebase`) has no branch name to render. On these checkouts the hook leaves every var unchanged and prints `bight: detached HEAD; leaving vars unchanged`. `copy` still seeds a missing file, so `git worktree add --detach` gets a starting `.env`. A rebase finishes back on the branch without firing `post-checkout`, and the env file keeps the values from before the rebase.
+
+`bight run` exits with an error on a detached HEAD, and `bight doctor` reports it as a warning.
+
 ### Seeding env files (`copy`)
 
 When you `git worktree add` a new working tree, you land in a clean directory with no `.env`. Set `copy` on an env file to seed it from somewhere — typically the same file in the main worktree:

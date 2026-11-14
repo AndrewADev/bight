@@ -346,3 +346,26 @@ func TestRunChecks_TemplateWithoutBranch(t *testing.T) {
 		t.Errorf("expected ok for template that does not use the branch, got: %v", results)
 	}
 }
+
+func TestRunChecks_DetachedHead(t *testing.T) {
+	deps := happyDeps
+	deps.detached = true
+	results := runChecks(templateCfg("db_{{slug .Branch}}"), nil, deps)
+	r, found := findByPrefix(results, "HEAD: detached")
+	if !found || r.status != "warn" {
+		t.Fatalf("expected warn for detached HEAD, got: %v", results)
+	}
+	tr, found := findByPrefix(results, "template:")
+	if !found || !strings.Contains(tr.msg, placeholderBranch) {
+		t.Errorf("expected template rendered for placeholder branch, got: %v", tr)
+	}
+}
+
+func TestRunChecks_AttachedHeadNoWarning(t *testing.T) {
+	deps := happyDeps
+	deps.branch = "main"
+	results := runChecks(templateCfg("db_{{slug .Branch}}"), nil, deps)
+	if _, found := findByPrefix(results, "HEAD:"); found {
+		t.Errorf("expected no HEAD result on a branch, got: %v", results)
+	}
+}

@@ -445,3 +445,75 @@ func TestPatchEnvFiles_NoBackupByDefault(t *testing.T) {
 		t.Errorf("expected no backup file, but it exists")
 	}
 }
+
+func TestPatchEnvFiles_DetachedLeavesVarsUnchanged(t *testing.T) {
+	dir := t.TempDir()
+	envPath := filepath.Join(dir, ".env")
+	original := []byte("DB_NAME=\"db_feat_x\"\nSECRET=abc\n")
+	if err := os.WriteFile(envPath, original, 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := &config.Config{
+		Project:  "myapp",
+		Defaults: config.Defaults{BranchTemplate: "db_{{slug .Branch}}"},
+		EnvFiles: []config.EnvFile{
+			{
+				Path:   envPath,
+				Backup: true,
+				Vars: []config.Var{
+					{Name: "DB_NAME", Strategy: "template", On: "checkout"},
+					{Name: "SECRET", Strategy: "random", On: "checkout"},
+				},
+			},
+		},
+	}
+
+	if err := patchEnvFiles(cfg, "", ""); err != nil {
+		t.Fatalf("patchEnvFiles: %v", err)
+	}
+
+	got, err := os.ReadFile(envPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != string(original) {
+		t.Errorf("file content changed: got %q, want %q", got, original)
+	}
+	if _, err := os.Stat(envPath + ".bak"); !os.IsNotExist(err) {
+		t.Errorf("expected no backup, stat err = %v", err)
+	}
+}
+
+func TestPatchEnvFiles_DetachedStillCopies(t *testing.T) {
+	dir := t.TempDir()
+	src := filepath.Join(dir, "source.env")
+	if err := os.WriteFile(src, []byte("DB_NAME=from_main\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	envPath := filepath.Join(dir, ".env")
+
+	cfg := &config.Config{
+		Project:  "myapp",
+		Defaults: config.Defaults{BranchTemplate: "db_{{slug .Branch}}"},
+		EnvFiles: []config.EnvFile{
+			{
+				Path: envPath,
+				Copy: &config.Copy{Source: src},
+				Vars: []config.Var{{Name: "DB_NAME", Strategy: "template", On: "checkout"}},
+			},
+		},
+	}
+
+	if err := patchEnvFiles(cfg, "", ""); err != nil {
+		t.Fatalf("patchEnvFiles: %v", err)
+	}
+
+	got, err := os.ReadFile(envPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != "DB_NAME=from_main\n" {
+		t.Errorf("content = %q, want copied source unchanged", got)
+	}
+}

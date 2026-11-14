@@ -56,7 +56,9 @@ func dryRunEnvFiles(cfg *config.Config, branch string) []dryRunResult {
 }
 
 // patchEnvFiles applies checkout patches and copies to every env file in cfg.
-// mainRoot is the base for relative copy sources; empty when unknown.
+// An empty branch (detached HEAD) runs the copies and leaves every var
+// unchanged. mainRoot is the base for relative copy sources; empty when
+// unknown.
 func patchEnvFiles(cfg *config.Config, branch, mainRoot string) error {
 	ctx := strategy.Context{
 		Branch:  branch,
@@ -78,7 +80,7 @@ func patchEnvFiles(cfg *config.Config, branch, mainRoot string) error {
 		patches := make(map[string]string)
 		sensitiveVars := make(map[string]bool)
 		for _, v := range ef.Vars {
-			if v.On != triggerCheckout {
+			if v.On != triggerCheckout || branch == "" {
 				continue
 			}
 			val, err := strategy.Apply(v.Strategy, ctx, cfg)
