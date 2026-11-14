@@ -1,11 +1,13 @@
 // Package git locates a repository on disk by reading .git, gitdir and
-// commondir files directly.
+// commondir files directly. HEAD of a reftable repository is resolved by
+// running git.
 package git
 
 import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 )
@@ -144,9 +146,60 @@ func readBranch(gitDir string) (branch string, detached bool, err error) {
 		return "", false, fmt.Errorf("reading HEAD: %w", err)
 	}
 	head := strings.TrimSpace(string(data))
+	if head == reftablePlaceholder {
+		head, err = readReftableHead(gitDir)
+		if err != nil {
+			return "", false, err
+		}
+	}
 	const prefix = "ref: refs/heads/"
 	if strings.HasPrefix(head, prefix) {
 		return head[len(prefix):], false, nil
 	}
 	return "", true, nil
+}
+
+// reftablePlaceholder is the content git writes to HEAD in repositories using
+// the reftable ref backend. The real HEAD lives in the reftable stack.
+const reftablePlaceholder = "ref: refs/heads/.invalid"
+
+// gitLocationEnv lists environment variables that would redirect git away
+// from the git dir passed on the command line.
+var gitLocationEnv = []string{"GIT_DIR=", "GIT_COMMON_DIR=", "GIT_WORK_TREE="}
+
+// readReftableHead resolves HEAD of the worktree owning gitDir with
+// `git symbolic-ref` and returns it in the format of a files-backend HEAD:
+// "ref: <target>" for a symbolic ref, or an empty string on a detached HEAD.
+func readReftableHead(gitDir string) (string, error) {
+	cmd := exec.Command("git", "--git-dir="+gitDir, "symbolic-ref", "-q", "HEAD")
+	cmd.Env = filterEnv(os.Environ(), gitLocationEnv)
+	out, err := cmd.Output()
+	var exitErr *exec.ExitError
+	if errors.As(err, &exitErr) && exitErr.ExitCode() == 1 {
+		return "", nil
+	}
+	if errors.As(err, &exitErr) && len(exitErr.Stderr) > 0 {
+		return "", fmt.Errorf("reading HEAD from reftable repository with git: %w: %s", err, strings.TrimSpace(string(exitErr.Stderr)))
+	}
+	if err != nil {
+		return "", fmt.Errorf("reading HEAD from reftable repository with git: %w", err)
+	}
+	return "ref: " + strings.TrimSpace(string(out)), nil
+}
+
+func filterEnv(env, prefixes []string) []string {
+	filtered := make([]string, 0, len(env))
+	for _, entry := range env {
+		drop := false
+		for _, prefix := range prefixes {
+			if strings.HasPrefix(entry, prefix) {
+				drop = true
+				break
+			}
+		}
+		if !drop {
+			filtered = append(filtered, entry)
+		}
+	}
+	return filtered
 }
