@@ -1,4 +1,16 @@
 # Changelog
+## v0.5.3 - 2026-11-14
+
+### Bug Fixes
+
+- Pin conform (#50)
+- Incidental SHA ref when detached head (#54)
+
+### Miscellaneous
+
+- Add issue template (#49)
+- Update module golang.org/x/text to v0.44.0 (#52)
+
 ## v0.5.2 - 2026-10-23
 
 ### Bug Fixes
