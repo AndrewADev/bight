@@ -61,7 +61,7 @@ jobs:
           BASE: ${{ github.event.pull_request.base.sha }}
           HEAD: ${{ github.event.pull_request.head.sha }}
         run: |
-          go install github.com/siderolabs/conform/cmd/conform@latest
+          go install github.com/siderolabs/conform/cmd/conform@v0.1.0-alpha.31
           git log --format='%H' "${BASE}".."${HEAD}" | while read sha; do
             git log -1 --format='%B' "$sha" > /tmp/msg.txt
             conform enforce --commit-msg-file /tmp/msg.txt
