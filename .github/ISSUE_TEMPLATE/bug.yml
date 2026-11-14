@@ -1,0 +1,102 @@
+name: Bug report
+description: bight does not behave as documented or expected.
+title: "bug: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Anonymize everything you paste.** Issues are public and may be read by automated tools. Replace project names, branch names, hostnames, paths, database names and any secrets with neutral stand-ins (`myapp`, `feat/x`, `db_example`) before submitting.
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened
+      description: What bight did, including any output or changed values.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Exact git and bight commands, starting from `bight install`.
+    validations:
+      required: true
+
+  - type: textarea
+    id: config
+    attributes:
+      label: Config
+      description: The smallest anonymized `.bight.yml` that reproduces the problem, plus any relevant `~/.bight.yml` defaults.
+      render: yaml
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: bight version
+      description: Output of `bight --version`.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install-method
+    attributes:
+      label: Install method
+      options:
+        - Homebrew
+        - go install
+        - Release binary
+        - Built from source
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - macOS arm64
+        - macOS amd64
+        - Linux arm64
+        - Linux amd64
+        - Windows amd64
+        - Other (describe under Additional context)
+    validations:
+      required: true
+
+  - type: input
+    id: git-version
+    attributes:
+      label: git version
+      description: Output of `git --version`.
+    validations:
+      required: true
+
+  - type: textarea
+    id: setup
+    attributes:
+      label: Repository setup
+      description: Anything non-default about the repository, such as linked worktrees, `core.hooksPath`, submodules or other hook managers. Anonymize names and paths.
+
+  - type: textarea
+    id: doctor
+    attributes:
+      label: "`bight doctor` output"
+      description: Run from the directory or worktree where the problem occurs. Anonymize names and paths.
+      render: shell
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Workarounds, logs, or anything else that narrows down the cause. Anonymize names and paths.
